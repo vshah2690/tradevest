@@ -1,0 +1,28 @@
+# Python
+machine_learning/venv/
+machine_learning/__pycache__/
+machine_learning/data/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+client/node_modules/
+server/node_modules/
+dist/
+client/dist/
+
+# Environment variables
+.env
+server/.env
+machine_learning/.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+code .gitignore
