@@ -14,8 +14,10 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import warnings
 warnings.filterwarnings('ignore')
 
-DATA_DIR = r'C:\Users\vshah\Desktop\Viraj\Projects\tradevest\machine_learning\data'
-MODELS_DIR = r'C:\Users\vshah\Desktop\Viraj\Projects\tradevest\machine_learning\models'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(SCRIPT_DIR)
+DATA_DIR   = os.path.join(BASE_DIR, 'data')
+MODELS_DIR = os.path.join(BASE_DIR, 'models')
 
 # Top stocks to train individual models for
 TARGET_STOCKS = [
