@@ -1,121 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect } from 'react'
+import useStore from './store'
+import useWebSocket from './hooks/useWebSocket'
+import usePrediction from './hooks/usePrediction'
 
-function App() {
-  const [count, setCount] = useState(0)
+import Navbar        from './components/layout/Navbar'
+import Sidebar       from './components/layout/Sidebar'
+import PriceChart    from './components/chart/PriceChart'
+import SignalPanel   from './components/ai/SignalPanel'
+import OrderPanel    from './components/trading/OrderPanel'
+import PortfolioPanel from './components/trading/PortfolioPanel'
+
+export default function App() {
+  const { predict } = usePrediction()
+
+  // Connect WebSocket for live prices
+  useWebSocket()
+
+  // Load initial prediction on mount
+  useEffect(() => {
+    predict('TCS.NS')
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '200px 1fr 280px',
+      gridTemplateRows:    '48px 1fr',
+      height:              '100vh',
+      overflow:            'hidden',
+    }}>
+      {/* Navbar — spans full width */}
+      <div style={{ gridColumn: '1 / -1' }}>
+        <Navbar />
+      </div>
 
-      <div className="ticks"></div>
+      {/* Sidebar — watchlist */}
+      <Sidebar />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* Main content */}
+      <main style={{
+        background:    'var(--bg)',
+        display:       'flex',
+        flexDirection: 'column',
+        overflow:      'hidden',
+      }}>
+        {/* Chart area */}
+        <div style={{
+          flex:    1,
+          padding: '16px',
+          overflow: 'hidden',
+        }}>
+          <PriceChart />
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {/* AI Signal bar */}
+        <SignalPanel />
+      </main>
+
+      {/* Right panel — order + portfolio */}
+      <div style={{
+        background:   'var(--bg2)',
+        borderLeft:   '1px solid var(--border)',
+        display:      'flex',
+        flexDirection: 'column',
+        overflow:     'hidden',
+      }}>
+        <OrderPanel />
+        <PortfolioPanel />
+      </div>
+    </div>
   )
 }
-
-export default App
