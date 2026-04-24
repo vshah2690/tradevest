@@ -492,6 +492,43 @@ def predict(request: PredictRequest):
 
     return fetch_and_predict(symbol)
 
+@app.get("/history/{symbol}")
+def get_history(symbol: str, days: int = 90):
+    """
+    Returns real historical OHLCV data for charting.
+    """
+    try:
+        df = yf.download(symbol, period='6mo', interval='1d',
+                        auto_adjust=True, progress=False)
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No data for {symbol}")
+
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        df = df.tail(days)
+        df.index = pd.to_datetime(df.index)
+
+        history = [
+            {
+                "date":   row.Index.strftime('%b %d'),
+                "open":   round(float(row.Open), 2),
+                "high":   round(float(row.High), 2),
+                "low":    round(float(row.Low), 2),
+                "close":  round(float(row.Close), 2),
+                "volume": int(row.Volume)
+            }
+            for row in df.itertuples()
+        ]
+
+        return {
+            "symbol":  symbol,
+            "history": history,
+            "count":   len(history)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/predict/{symbol}")
 def predict_get(symbol: str):

@@ -45,11 +45,20 @@ export default function App() {
         overflow:      'hidden',
       }}>
         {/* Chart area */}
-        <div style={{
+        {/* <div style={{
           flex:    1,
           padding: '16px',
           overflow: 'hidden',
-        }}>
+        }}> */}
+        {/* Chart area */}
+        <div style={{
+          flex:      1,
+          padding:   '16px',
+          overflow:  'hidden',
+          minHeight: 0,
+          display:   'flex',
+          flexDirection: 'column',
+          }}>
           <PriceChart />
         </div>
 

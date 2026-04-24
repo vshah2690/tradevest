@@ -29,6 +29,22 @@ router.get('/quote/:symbol', async (req, res) => {
   }
 })
 
+// GET /api/market/history/:symbol
+// Returns real historical price data for charting
+router.get('/history/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params
+    const response = await axios.get(
+      `${ML_API}/history/${symbol}`,
+      { timeout: 15000 }
+    )
+    res.json(response.data)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch history' })
+  }
+})
+
+
 // GET /api/market/symbols
 // Returns the default watchlist symbols
 router.get('/symbols', (req, res) => {

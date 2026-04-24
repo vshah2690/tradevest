@@ -15,6 +15,7 @@ API.interceptors.request.use(config => {
 export const marketAPI = {
   getSymbols:    ()       => API.get('/market/symbols'),
   getQuote:      (symbol) => API.get(`/market/quote/${symbol}`),
+  getHistory: (symbol) => API.get(`/market/history/${symbol}`),
 }
 
 export const predictAPI = {
