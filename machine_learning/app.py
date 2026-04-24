@@ -34,7 +34,7 @@ Usage:
          -H "Content-Type: application/json"
          -d '{"symbol": "TCS.NS"}'
 
-Author: TradeVest Team
+Author: Viraj Shah, Vrajrajsinh Rathod
 Version: 1.0
 """
 

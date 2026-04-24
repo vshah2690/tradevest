@@ -1,147 +1,28 @@
-// import useStore from '../../store'
-
-// const SIGNAL_COLORS = {
-//   BUY:   { bg: 'rgba(0,212,160,0.12)', color: 'var(--green)', border: 'rgba(0,212,160,0.3)' },
-//   SELL:  { bg: 'rgba(255,77,106,0.12)', color: 'var(--red)',   border: 'rgba(255,77,106,0.3)' },
-//   HOLD:  { bg: 'rgba(245,158,11,0.12)', color: 'var(--amber)', border: 'rgba(245,158,11,0.3)' },
-//   ERROR: { bg: 'rgba(90,106,128,0.12)', color: 'var(--muted)', border: 'rgba(90,106,128,0.3)' },
-// }
-
-// export default function SignalPanel() {
-//   const currentData = useStore(s => s.currentData)
-//   const isLoading   = useStore(s => s.isLoading)
-
-//   if (isLoading) {
-//     return (
-//       <div style={{
-//         background: 'var(--bg2)', borderTop: '1px solid var(--border)',
-//         padding: '12px 16px', display: 'flex', alignItems: 'center',
-//         gap: '8px', color: 'var(--muted)', fontSize: '12px'
-//       }}>
-//         <div style={{
-//           width: '14px', height: '14px',
-//           border: '2px solid var(--border2)',
-//           borderTopColor: 'var(--blue)',
-//           borderRadius: '50%',
-//           animation: 'spin 0.8s linear infinite', flexShrink: 0
-//         }} />
-//         Analysing with AI...
-//         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-//       </div>
-//     )
-//   }
-
-//   if (!currentData?.predictions) return null
-
-//   const overall = currentData.overall_signal
-//   const oc      = SIGNAL_COLORS[overall] || SIGNAL_COLORS.HOLD
-
-//   return (
-//     <div style={{
-//       background: 'var(--bg2)', borderTop: '1px solid var(--border)',
-//       padding: '10px 16px', display: 'flex', alignItems: 'center',
-//       gap: '16px', flexWrap: 'wrap'
-//     }}>
-//       {/* Overall signal */}
-//       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-//         <span style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-//           Overall
-//         </span>
-//         <span style={{
-//           padding: '4px 12px', borderRadius: '5px', fontWeight: '700',
-//           fontSize: '12px', letterSpacing: '0.5px',
-//           background: oc.bg, color: oc.color, border: `1px solid ${oc.border}`
-//         }}>{overall}</span>
-//       </div>
-
-//       {/* Divider */}
-//       <div style={{ width: '1px', height: '28px', background: 'var(--border)' }} />
-
-//       {/* Individual predictions */}
-//       {currentData.predictions.map((pred, i) => {
-//         const pc = SIGNAL_COLORS[pred.signal] || SIGNAL_COLORS.HOLD
-//         return (
-//           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-//             <div>
-//               <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '3px' }}>
-//                 {pred.horizon}
-//               </div>
-//               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-//                 <span style={{
-//                   padding: '3px 8px', borderRadius: '4px',
-//                   fontSize: '11px', fontWeight: '700',
-//                   background: pc.bg, color: pc.color, border: `1px solid ${pc.border}`
-//                 }}>{pred.signal}</span>
-//                 <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: pc.color }}>
-//                   {pred.confidence}%
-//                 </span>
-//               </div>
-//             </div>
-
-//             {/* Confidence bar */}
-//             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-//               <div style={{
-//                 width: '60px', height: '4px',
-//                 background: 'var(--bg4)', borderRadius: '2px', overflow: 'hidden'
-//               }}>
-//                 <div style={{
-//                   width: `${pred.confidence}%`, height: '100%',
-//                   background: pc.color, borderRadius: '2px',
-//                   transition: 'width 0.5s ease'
-//                 }} />
-//               </div>
-//               <div style={{ fontSize: '9px', color: 'var(--muted2)', fontFamily: 'var(--mono)' }}>
-//                 model: {pred.model_accuracy}%
-//               </div>
-//             </div>
-//           </div>
-//         )
-//       })}
-
-//       {/* Timestamp */}
-//       <div style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--muted2)', fontFamily: 'var(--mono)' }}>
-//         {new Date(currentData.timestamp).toLocaleTimeString()}
-//       </div>
-//     </div>
-//   )
-// }
-
 import useStore from '../../store'
 
-const SIGNAL_STYLES = {
-  BUY:  { bg: 'rgba(0,212,160,0.15)', color: '#00d4a0', border: 'rgba(0,212,160,0.35)' },
-  SELL: { bg: 'rgba(255,77,106,0.15)', color: '#ff4d6a', border: 'rgba(255,77,106,0.35)' },
-  HOLD: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: 'rgba(245,158,11,0.35)' },
+function getReadableSignal(signal, confidence) {
+  if (confidence >= 65) {
+    return signal === 'BUY'
+      ? { text: 'Likely to go UP',   emoji: '📈', color: 'var(--green)' }
+      : signal === 'SELL'
+      ? { text: 'Likely to go DOWN', emoji: '📉', color: 'var(--red)' }
+      : { text: 'Uncertain',         emoji: '➡️', color: 'var(--amber)' }
+  } else if (confidence >= 55) {
+    return signal === 'BUY'
+      ? { text: 'Slight chance UP',   emoji: '↗️', color: 'var(--green)' }
+      : signal === 'SELL'
+      ? { text: 'Slight chance DOWN', emoji: '↘️', color: 'var(--red)' }
+      : { text: 'Uncertain',          emoji: '➡️', color: 'var(--amber)' }
+  } else {
+    return { text: 'Hard to predict', emoji: '🤔', color: 'var(--muted)' }
+  }
 }
 
-function SignalBadge({ signal, size = 'sm' }) {
-  const s = SIGNAL_STYLES[signal] || SIGNAL_STYLES.HOLD
-  return (
-    <span style={{
-      padding:      size === 'lg' ? '6px 16px' : '3px 10px',
-      borderRadius: '5px',
-      fontWeight:   '700',
-      fontSize:     size === 'lg' ? '14px' : '11px',
-      letterSpacing: '0.5px',
-      background:   s.bg,
-      color:        s.color,
-      border:       `1px solid ${s.border}`,
-    }}>{signal}</span>
-  )
-}
-
-function ConfidenceBar({ value, color }) {
-  return (
-    <div style={{ width: '100%', height: '5px', background: 'var(--bg4)', borderRadius: '3px', overflow: 'hidden' }}>
-      <div style={{
-        width:      `${value}%`,
-        height:     '100%',
-        background: color,
-        borderRadius: '3px',
-        transition: 'width 0.6s ease'
-      }} />
-    </div>
-  )
+function getConfidenceLabel(confidence) {
+  if (confidence >= 70) return 'Very confident'
+  if (confidence >= 60) return 'Fairly confident'
+  if (confidence >= 55) return 'Slightly confident'
+  return 'Low confidence'
 }
 
 export default function SignalPanel() {
@@ -149,27 +30,28 @@ export default function SignalPanel() {
   const isLoading     = useStore(s => s.isLoading)
   const currentSymbol = useStore(s => s.currentSymbol)
   const currency      = currentSymbol?.includes('.NS') ? '₹' : '$'
+  const symClean      = currentSymbol?.replace('.NS', '').replace('.BO', '')
 
   if (isLoading) {
     return (
       <div style={{
         background:  'var(--bg2)',
         borderTop:   '1px solid var(--border)',
-        padding:     '16px',
+        padding:     '20px 24px',
         display:     'flex',
         alignItems:  'center',
-        gap:         '10px',
+        gap:         '12px',
         color:       'var(--muted)',
-        fontSize:    '12px'
+        fontSize:    '13px'
       }}>
         <div style={{
-          width: '16px', height: '16px',
+          width: '18px', height: '18px',
           border: '2px solid var(--border2)',
           borderTopColor: 'var(--purple)',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite', flexShrink: 0
         }} />
-        TradeVest AI is analysing {currentSymbol}...
+        TradeVest AI is analysing {symClean}...
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -177,104 +59,204 @@ export default function SignalPanel() {
 
   if (!currentData?.predictions) return null
 
-  const overall   = currentData.overall_signal
-  const os        = SIGNAL_STYLES[overall] || SIGNAL_STYLES.HOLD
-  const price     = currentData.current_price
+  const price    = currentData.current_price
+  const overall  = currentData.overall_signal
+  const preds    = currentData.predictions
+
+  // Get the most reliable prediction (5-day has highest accuracy)
+  const best     = preds.find(p => p.horizon === 'Medium-term') || preds[0]
+  const readable = getReadableSignal(best?.signal || overall, best?.confidence || 50)
+
+  // Price range from all predictions
+  const targets  = preds.map(p => {
+    const prob = p.probability_up / 100
+    return p.signal === 'BUY'
+      ? price * (1 + (prob - 0.5) * 0.15)
+      : price * (1 - (0.5 - prob) * 0.15)
+  })
+  const minTarget = Math.min(...targets)
+  const maxTarget = Math.max(...targets)
+
+  const HORIZON_LABELS = {
+    'Intraday':    'Today',
+    'Short-term':  'This week (3 days)',
+    'Medium-term': 'Next week (5 days)',
+  }
 
   return (
     <div style={{
       background:  'var(--bg2)',
       borderTop:   '1px solid var(--border)',
-      padding:     '12px 16px',
+      padding:     '16px 20px',
     }}>
-      {/* Header row */}
       <div style={{
-        display:        'flex',
-        alignItems:     'center',
-        gap:            '12px',
-        marginBottom:   '12px',
-        paddingBottom:  '10px',
-        borderBottom:   '1px solid var(--border)',
+        display:  'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap:      '16px',
       }}>
-        <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          AI Overall Signal
-        </div>
-        <SignalBadge signal={overall} size="lg" />
-        <div style={{ fontSize: '11px', color: 'var(--muted)', marginLeft: '4px' }}>
-          Based on 3 prediction horizons
-        </div>
-        <div style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--muted2)', fontFamily: 'var(--mono)' }}>
-          {new Date(currentData.timestamp).toLocaleTimeString()}
-        </div>
-      </div>
 
-      {/* 3 horizon predictions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-        {currentData.predictions.map((pred, i) => {
-          const ps      = SIGNAL_STYLES[pred.signal] || SIGNAL_STYLES.HOLD
-          const probUp  = pred.probability_up
-          const probDn  = pred.probability_down
-          const target  = pred.signal === 'BUY'
-            ? price * (1 + (probUp - 50) / 200)
-            : price * (1 - (probDn - 50) / 200)
+        {/* LEFT — Main verdict */}
+        <div style={{
+          background:   'var(--bg3)',
+          borderRadius: '12px',
+          padding:      '16px',
+          border:       `1px solid ${readable.color}30`,
+        }}>
+          {/* Header */}
+          <div style={{
+            fontSize:     '11px',
+            color:        'var(--muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.8px',
+            marginBottom: '10px',
+            fontWeight:   '600'
+          }}>
+            AI Verdict for {symClean}
+          </div>
 
-          return (
-            <div key={i} style={{
-              background:   'var(--bg3)',
-              border:       `1px solid var(--border)`,
-              borderRadius: '10px',
-              padding:      '12px',
-            }}>
-              {/* Horizon label */}
+          {/* Main signal */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '24px' }}>{readable.emoji}</span>
+            <div>
               <div style={{
-                fontSize: '10px', color: 'var(--muted)',
-                textTransform: 'uppercase', letterSpacing: '0.8px',
-                marginBottom: '8px', fontWeight: '600'
-              }}>{pred.horizon} · {pred.days}d</div>
-
-              {/* Signal + confidence */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <SignalBadge signal={pred.signal} />
-                <span style={{
-                  fontFamily: 'var(--mono)', fontSize: '13px',
-                  fontWeight: '500', color: ps.color
-                }}>{pred.confidence}%</span>
-              </div>
-
-              {/* Confidence bar */}
-              <ConfidenceBar value={pred.confidence} color={ps.color} />
-
-              {/* Probabilities */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between',
-                marginTop: '8px', fontSize: '10px', fontFamily: 'var(--mono)'
-              }}>
-                <span style={{ color: 'var(--green)' }}>↑ {probUp}%</span>
-                <span style={{ color: 'var(--red)' }}>↓ {probDn}%</span>
-              </div>
-
-              {/* Price target */}
-              <div style={{
-                marginTop: '8px', padding: '6px 8px',
-                background: 'var(--bg4)', borderRadius: '6px',
-                fontSize: '11px', fontFamily: 'var(--mono)'
-              }}>
-                <span style={{ color: 'var(--muted)' }}>Target: </span>
-                <span style={{ color: ps.color }}>
-                  {currency}{target.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              {/* Model accuracy */}
-              <div style={{
-                marginTop: '6px', fontSize: '10px',
-                color: 'var(--muted2)', fontFamily: 'var(--mono)'
-              }}>
-                Model accuracy: {pred.model_accuracy}%
+                fontSize:   '18px',
+                fontWeight: '700',
+                color:      readable.color,
+                letterSpacing: '-0.3px'
+              }}>{readable.text}</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+                {getConfidenceLabel(best?.confidence)} · {best?.confidence}% probability
               </div>
             </div>
-          )
-        })}
+          </div>
+
+          {/* Predicted range */}
+          <div style={{
+            background:   'var(--bg4)',
+            borderRadius: '8px',
+            padding:      '10px 12px',
+            marginTop:    '10px',
+          }}>
+            <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              Predicted price range
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '15px', fontWeight: '500', color: 'var(--red)' }}>
+                  {currency}{minTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--muted)' }}>Low estimate</div>
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: '16px' }}>→</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '15px', fontWeight: '500', color: 'var(--green)' }}>
+                  {currency}{maxTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--muted)' }}>High estimate</div>
+              </div>
+            </div>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--muted)' }}>
+              Current: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>
+                {currency}{price?.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{
+            marginTop:  '10px',
+            fontSize:   '10px',
+            color:      'var(--muted2)',
+            lineHeight: '1.5',
+          }}>
+            ⚠️ AI analysis only — not financial advice. Always do your own research.
+          </div>
+        </div>
+
+        {/* RIGHT — Breakdown per horizon */}
+        <div style={{
+          background:   'var(--bg3)',
+          borderRadius: '12px',
+          padding:      '16px',
+          border:       '1px solid var(--border)',
+        }}>
+          <div style={{
+            fontSize:      '11px',
+            color:         'var(--muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.8px',
+            marginBottom:  '12px',
+            fontWeight:    '600'
+          }}>
+            Prediction Breakdown
+          </div>
+
+          {preds.map((pred, i) => {
+            const r   = getReadableSignal(pred.signal, pred.confidence)
+            const lbl = HORIZON_LABELS[pred.horizon] || pred.horizon
+            const barW = pred.confidence
+
+            return (
+              <div key={i} style={{
+                marginBottom: i < preds.length - 1 ? '14px' : 0,
+                paddingBottom: i < preds.length - 1 ? '14px' : 0,
+                borderBottom: i < preds.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                {/* Label + verdict */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)' }}>{lbl}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '1px' }}>{r.emoji} {r.text}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '13px', color: r.color, fontWeight: '500' }}>
+                      {pred.confidence}%
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)' }}>confident</div>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ height: '4px', background: 'var(--bg4)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{
+                    width:        `${barW}%`,
+                    height:       '100%',
+                    background:   r.color,
+                    borderRadius: '2px',
+                    transition:   'width 0.6s ease'
+                  }} />
+                </div>
+
+                {/* Up/down split */}
+                <div style={{
+                  display:        'flex',
+                  justifyContent: 'space-between',
+                  marginTop:      '4px',
+                  fontSize:       '10px',
+                  fontFamily:     'var(--mono)',
+                  color:          'var(--muted)'
+                }}>
+                  <span style={{ color: 'var(--green)' }}>↑ {pred.probability_up}% chance up</span>
+                  <span style={{ color: 'var(--red)' }}>↓ {pred.probability_down}% chance down</span>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Model note */}
+          <div style={{
+            marginTop:    '12px',
+            padding:      '8px 10px',
+            background:   'var(--bg4)',
+            borderRadius: '6px',
+            fontSize:     '10px',
+            color:        'var(--muted)',
+            lineHeight:   '1.5'
+          }}>
+            💡 Predictions use XGBoost ML trained on 10 years of market data.
+            Best accuracy on 5-day predictions (73.42%).
+          </div>
+        </div>
       </div>
     </div>
   )

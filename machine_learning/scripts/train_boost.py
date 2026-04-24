@@ -67,7 +67,7 @@ Output:
     models/xgboost_target_*.pkl       (individual XGBoost models)
     models/lgbm_target_*.pkl          (individual LightGBM models)
 
-Author: Viraj Shah
+Author: Viraj Shah, Vrajrajsinh Rathod
 Version: 3.0 (final — production ready)
 """
 

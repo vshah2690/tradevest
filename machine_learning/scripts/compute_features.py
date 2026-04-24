@@ -34,7 +34,7 @@ Model Training Results (after feature engineering):
     - 3-Day  XGBoost: 65.86% accuracy (GridSearch optimized)
     - 5-Day  XGBoost: 73.42% accuracy (GridSearch optimized)
 
-Author: Viraj Shah
+Author: Viraj Shah, Vrajrajsinh Rathod
 Version: 2.0 (final — production ready)
 """
 

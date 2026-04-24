@@ -70,7 +70,7 @@ Output:
     models/lstm_scaler_target_5d.pkl (deprecated — not used in production)
     models/lstm_scaler_target_3d.pkl (deprecated — not used in production)
 
-Author: Viraj Shah
+Author: Viraj Shah, Vrajrajsinh Rathod
 Version: 1.0 (experimental — not production)
 """
 

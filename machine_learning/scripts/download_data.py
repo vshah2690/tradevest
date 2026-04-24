@@ -39,7 +39,7 @@ Note on TATAMOTORS.NS:
     - The actual ticker on NSE is TATAMOTORS.NS but Yahoo Finance
       sometimes has issues with it — safe to ignore, 24 other symbols work
 
-Author: Viraj Shah
+Author: Viraj Shah, Vrajrajsinh Rathod
 Version: 2.0 (production ready)
 """
 
