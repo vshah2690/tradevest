@@ -9,6 +9,7 @@
  */
 
 require('dotenv').config()
+require('events').EventEmitter.defaultMaxListeners = 20
 const express    = require('express')
 const cors       = require('cors')
 const http       = require('http')
@@ -20,6 +21,7 @@ const marketRoutes   = require('./routes/market')
 const predictRoutes  = require('./routes/predict')
 const authRoutes     = require('./routes/auth')
 const portfolioRoutes = require('./routes/portfolio')
+const aiRoutes = require('./routes/ai')
 
 const app    = express()
 const server = http.createServer(app)
@@ -34,6 +36,7 @@ app.use('/api/market',    marketRoutes)
 app.use('/api/predict',   predictRoutes)
 app.use('/api/auth',      authRoutes)
 app.use('/api/portfolio', portfolioRoutes)
+app.use('/api/ai', aiRoutes)
 
 // Health check
 app.get('/', (req, res) => {
