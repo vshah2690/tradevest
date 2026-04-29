@@ -22,6 +22,8 @@ const predictRoutes  = require('./routes/predict')
 const authRoutes     = require('./routes/auth')
 const portfolioRoutes = require('./routes/portfolio')
 const aiRoutes = require('./routes/ai')
+const watchlistRoutes = require('./routes/watchlist')
+const trackRoutes     = require('./routes/track')
 
 const app    = express()
 const server = http.createServer(app)
@@ -37,6 +39,8 @@ app.use('/api/predict',   predictRoutes)
 app.use('/api/auth',      authRoutes)
 app.use('/api/portfolio', portfolioRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/watchlist', watchlistRoutes)
+app.use('/api/track',     trackRoutes)
 
 // Health check
 app.get('/', (req, res) => {

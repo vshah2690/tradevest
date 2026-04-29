@@ -1,85 +1,219 @@
 import { useEffect } from 'react'
 import useStore from '../../store'
-import { portfolioAPI } from '../../services/api'
+import { trackAPI } from '../../services/api'
 
-export default function PortfolioPanel() {
-  const portfolio    = useStore(s => s.portfolio)
-  const setPortfolio = useStore(s => s.setPortfolio)
-  const token        = useStore(s => s.token)
+export default function TrackedPanel() {
+  const token                   = useStore(s => s.token)
+  const trackedPredictions      = useStore(s => s.trackedPredictions)
+  const setTrackedPredictions   = useStore(s => s.setTrackedPredictions)
+  const removeTrackedPrediction = useStore(s => s.removeTrackedPrediction)
 
+  // Load predictions on mount and when token changes
   useEffect(() => {
-    if (!token) return
-    portfolioAPI.getPortfolio()
-      .then(res => setPortfolio(res.data))
+    if (!token) { setTrackedPredictions([]); return }
+    trackAPI.getAll()
+      .then(res => setTrackedPredictions(res.data.predictions || []))
       .catch(() => {})
   }, [token])
 
-  const INITIAL = 100000
-  const total   = portfolio?.totalValue || INITIAL
-  const pnl     = portfolio?.totalPnl   || 0
-  const pnlPct  = portfolio?.totalPnlPct || 0
-  const cash    = portfolio?.cash       || INITIAL
+  // Delete handler — instant UI update + API call
+  const handleDelete = async (id, symbol) => {
+    removeTrackedPrediction(id, symbol) // updates store immediately
+    try {
+      await trackAPI.delete(id)
+    } catch {}
+  }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      {/* Portfolio value card */}
+  // Calculate stats from store data
+  const predictions = trackedPredictions
+  const completed   = predictions.filter(p => p.outcome !== 'PENDING')
+  const correct     = completed.filter(p => p.outcome === 'CORRECT').length
+  const stats = {
+    total:     predictions.length,
+    pending:   predictions.filter(p => p.outcome === 'PENDING').length,
+    correct,
+    incorrect: completed.length - correct,
+    accuracy:  completed.length > 0
+      ? Math.round((correct / completed.length) * 100)
+      : null
+  }
+
+  if (!token) {
+    return (
       <div style={{
-        background: 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.08))',
-        borderBottom: '1px solid var(--border)',
-        padding: '14px 16px'
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '24px', gap: '12px'
       }}>
-        <div style={{ fontSize: '10px', color: 'rgba(147,197,253,0.7)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-          Portfolio Value
-        </div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: '22px', fontWeight: '500', letterSpacing: '-0.5px' }}>
-          ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <div style={{ fontSize: '32px' }}>📊</div>
+        <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>
+          Track AI Predictions
         </div>
         <div style={{
-          fontFamily: 'var(--mono)', fontSize: '12px', marginTop: '3px',
-          color: pnl >= 0 ? 'var(--green)' : 'var(--red)'
+          fontSize: '11px', color: 'var(--muted)',
+          textAlign: 'center', lineHeight: '1.5'
         }}>
-          {pnl >= 0 ? '+' : ''}₹{Math.abs(pnl).toFixed(2)} ({pnl >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%)
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11px' }}>
-          <span style={{ color: 'var(--muted)' }}>Cash</span>
-          <span style={{ fontFamily: 'var(--mono)' }}>₹{cash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          Login to track predictions and see if the AI is right
         </div>
       </div>
+    )
+  }
 
-      {/* Positions */}
-      <div style={{ padding: '10px 14px', flex: 1, overflow: 'auto' }}>
-        <div style={{ fontSize: '11px', fontWeight: '600', marginBottom: '8px' }}>Open Positions</div>
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {!token ? (
-          <div style={{ fontSize: '11px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>
-            Login to track portfolio
+      {/* Stats header */}
+      {stats.total > 0 && (
+        <div style={{
+          padding:      '12px 14px',
+          borderBottom: '1px solid var(--border)',
+          background:   'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.06))'
+        }}>
+          <div style={{
+            fontSize: '10px', color: 'var(--muted)',
+            textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px'
+          }}>
+            AI Prediction Accuracy
           </div>
-        ) : !portfolio?.positions?.length ? (
-          <div style={{ fontSize: '11px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>
-            No open positions
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontFamily: 'var(--mono)', fontSize: '20px', fontWeight: '500',
+                color: stats.accuracy !== null
+                  ? (stats.accuracy >= 60 ? 'var(--green)' : 'var(--amber)')
+                  : 'var(--muted)'
+              }}>
+                {stats.accuracy !== null ? `${stats.accuracy}%` : '--'}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--muted)' }}>accuracy</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '20px', fontWeight: '500', color: 'var(--green)' }}>
+                {stats.correct}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--muted)' }}>correct</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '20px', fontWeight: '500', color: 'var(--red)' }}>
+                {stats.incorrect}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--muted)' }}>wrong</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '20px', fontWeight: '500', color: 'var(--amber)' }}>
+                {stats.pending}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--muted)' }}>pending</div>
+            </div>
           </div>
-        ) : (
-          portfolio.positions.map((pos, i) => (
-            <div key={i} style={{
-              background: 'var(--bg3)', border: '1px solid var(--border)',
-              borderRadius: '8px', padding: '9px 11px', marginBottom: '6px'
+        </div>
+      )}
+
+      {/* Predictions list */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '600', marginBottom: '8px' }}>
+          Tracked Predictions
+        </div>
+
+        {predictions.length === 0 && (
+          <div style={{
+            textAlign: 'center', color: 'var(--muted)',
+            fontSize: '11px', padding: '16px', lineHeight: '1.8'
+          }}>
+            No tracked predictions yet.
+            <br />
+            Click "Track This Prediction" on any stock!
+          </div>
+        )}
+
+        {predictions.map((pred, i) => {
+          const isCorrect  = pred.outcome === 'CORRECT'
+          const isWrong    = pred.outcome === 'INCORRECT'
+          const targetDate = new Date(pred.targetDate)
+          const daysLeft   = Math.ceil((targetDate - new Date()) / (1000 * 60 * 60 * 24))
+
+          return (
+            <div key={pred._id || i} style={{
+              background:   'var(--bg3)',
+              border:       `1px solid ${
+                isCorrect ? 'rgba(0,212,160,0.2)'
+                : isWrong ? 'rgba(255,77,106,0.2)'
+                : 'var(--border)'}`,
+              borderRadius: '8px',
+              padding:      '10px 12px',
+              marginBottom: '8px',
+              position:     'relative',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontWeight: '700', fontSize: '12px' }}>{pos.symbol}</span>
+
+              {/* Delete button */}
+              <button
+                onClick={() => handleDelete(pred._id, pred.symbol)}
+                title="Remove"
+                style={{
+                  position:   'absolute', top: '6px', right: '6px',
+                  background: 'transparent', border: 'none',
+                  color:      'var(--muted2)', fontSize: '16px',
+                  cursor:     'pointer', padding: '0 4px',
+                  lineHeight: 1, borderRadius: '4px',
+                  transition: 'color 0.15s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--red)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted2)'}
+              >×</button>
+
+              {/* Top row */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                marginBottom: '4px', paddingRight: '20px'
+              }}>
+                <span style={{ fontWeight: '700', fontSize: '12px' }}>
+                  {pred.symbol.replace('.NS','').replace('.BO','')}
+                </span>
                 <span style={{
-                  fontFamily: 'var(--mono)', fontSize: '11px',
-                  color: pos.pnl >= 0 ? 'var(--green)' : 'var(--red)'
+                  fontSize: '11px', fontWeight: '600',
+                  padding: '2px 8px', borderRadius: '4px',
+                  background: isCorrect ? 'rgba(0,212,160,0.15)'
+                    : isWrong  ? 'rgba(255,77,106,0.15)'
+                    : 'rgba(245,158,11,0.15)',
+                  color: isCorrect ? 'var(--green)'
+                    : isWrong ? 'var(--red)'
+                    : 'var(--amber)'
                 }}>
-                  {pos.pnl >= 0 ? '+' : ''}₹{pos.pnl?.toFixed(2)} ({pos.pnlPct >= 0 ? '+' : ''}{pos.pnlPct?.toFixed(2)}%)
+                  {isCorrect ? '✓ Correct'
+                    : isWrong ? '✗ Wrong'
+                    : daysLeft > 0 ? `⏳ ${daysLeft}d left`
+                    : '⏳ Due today'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontFamily: 'var(--mono)', color: 'var(--muted)' }}>
-                <span>{pos.shares} shares @ ₹{pos.avgCost?.toFixed(2)}</span>
-                <span>₹{pos.currentPrice?.toFixed(2)}</span>
+
+              {/* Signal + price */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--muted)'
+              }}>
+                <span>
+                  <span style={{
+                    color: pred.signal === 'BUY'  ? 'var(--green)'
+                         : pred.signal === 'SELL' ? 'var(--red)'
+                         : 'var(--amber)',
+                    fontWeight: '600'
+                  }}>{pred.signal}</span>
+                  {' '}@ {pred.symbol.includes('.NS') ? '₹' : '$'}{pred.priceAtTrack?.toFixed(2)}
+                </span>
+                {pred.returnPct !== undefined && pred.returnPct !== null && (
+                  <span style={{ color: pred.returnPct >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                    {pred.returnPct >= 0 ? '+' : ''}{pred.returnPct?.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+
+              {/* Horizon + confidence */}
+              <div style={{ fontSize: '10px', color: 'var(--muted2)', marginTop: '3px' }}>
+                {pred.horizon} · {pred.confidence}% confidence
               </div>
             </div>
-          ))
-        )}
+          )
+        })}
       </div>
     </div>
   )

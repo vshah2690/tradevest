@@ -9,6 +9,8 @@ import PriceChart    from './components/chart/PriceChart'
 import SignalPanel   from './components/ai/SignalPanel'
 import OrderPanel    from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
+import ActionPanel   from './components/trading/OrderPanel'
+import TrackedPanel  from './components/trading/PortfolioPanel'
 
 export default function App() {
   const { predict } = usePrediction()

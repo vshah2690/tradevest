@@ -492,6 +492,43 @@ def predict(request: PredictRequest):
 
     return fetch_and_predict(symbol)
 
+# @app.get("/history/{symbol}")
+# def get_history(symbol: str, days: int = 90):
+#     """
+#     Returns real historical OHLCV data for charting.
+#     """
+#     try:
+#         df = yf.download(symbol, period='6mo', interval='1d',
+#                         auto_adjust=True, progress=False)
+#         if df.empty:
+#             raise HTTPException(status_code=404, detail=f"No data for {symbol}")
+
+#         if isinstance(df.columns, pd.MultiIndex):
+#             df.columns = df.columns.get_level_values(0)
+
+#         df = df.tail(days)
+#         df.index = pd.to_datetime(df.index)
+
+#         history = [
+#             {
+#                 "date":   row.Index.strftime('%b %d'),
+#                 "open":   round(float(row.Open), 2),
+#                 "high":   round(float(row.High), 2),
+#                 "low":    round(float(row.Low), 2),
+#                 "close":  round(float(row.Close), 2),
+#                 "volume": int(row.Volume)
+#             }
+#             for row in df.itertuples()
+#         ]
+
+#         return {
+#             "symbol":  symbol,
+#             "history": history,
+#             "count":   len(history)
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/history/{symbol}")
 def get_history(symbol: str, days: int = 90):
     """
@@ -509,23 +546,31 @@ def get_history(symbol: str, days: int = 90):
         df = df.tail(days)
         df.index = pd.to_datetime(df.index)
 
-        history = [
-            {
-                "date":   row.Index.strftime('%b %d'),
-                "open":   round(float(row.Open), 2),
-                "high":   round(float(row.High), 2),
-                "low":    round(float(row.Low), 2),
-                "close":  round(float(row.Close), 2),
-                "volume": int(row.Volume)
-            }
-            for row in df.itertuples()
-        ]
+        # Replace NaN and infinity values before serializing
+        df = df.replace([np.inf, -np.inf], np.nan)
+        df = df.dropna()
+
+        history = []
+        for row in df.itertuples():
+            try:
+                history.append({
+                    "date":   row.Index.strftime('%b %d'),
+                    "open":   round(float(row.Open),  2),
+                    "high":   round(float(row.High),  2),
+                    "low":    round(float(row.Low),   2),
+                    "close":  round(float(row.Close), 2),
+                    "volume": int(row.Volume) if not np.isnan(row.Volume) else 0
+                })
+            except Exception:
+                continue
 
         return {
             "symbol":  symbol,
             "history": history,
             "count":   len(history)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -538,3 +583,220 @@ def predict_get(symbol: str):
     Example: GET /predict/TCS.NS
     """
     return fetch_and_predict(symbol.strip().upper())
+
+
+# @app.get("/search")
+# async def search_stocks(query: str):
+    # """
+    # Global stock search — searches across all major exchanges simultaneously.
+    # Returns results with exchange, country, and live price.
+    # """
+    # import yfinance as yf
+    # import asyncio
+    # from concurrent.futures import ThreadPoolExecutor
+
+    # query = query.strip().upper()
+    # if not query:
+    #     raise HTTPException(status_code=400, detail="Query required")
+
+    # # All suffixes to try — covers every major exchange globally
+    # SUFFIXES = [
+    #     # India
+    #     '.NS', '.BO',
+    #     # US — no suffix
+    #     '',
+    #     # Europe
+    #     '.L',   # UK - London
+    #     '.DE',  # Germany - XETRA
+    #     '.PA',  # France - Paris
+    #     '.MI',  # Italy - Milan
+    #     '.MC',  # Spain - Madrid
+    #     '.AS',  # Netherlands - Amsterdam
+    #     '.BR',  # Belgium - Brussels
+    #     '.SW',  # Switzerland
+    #     '.OL',  # Norway - Oslo
+    #     '.ST',  # Sweden - Stockholm
+    #     '.HE',  # Finland - Helsinki
+    #     '.CO',  # Denmark - Copenhagen
+    #     # Asia Pacific
+    #     '.T',   # Japan - Tokyo
+    #     '.HK',  # Hong Kong
+    #     '.SS',  # China - Shanghai
+    #     '.SZ',  # China - Shenzhen
+    #     '.KS',  # South Korea
+    #     '.KQ',  # South Korea - KOSDAQ
+    #     '.AX',  # Australia - ASX
+    #     '.NZ',  # New Zealand
+    #     '.SI',  # Singapore
+    #     '.BK',  # Thailand - Bangkok
+    #     '.JK',  # Indonesia - Jakarta
+    #     '.KL',  # Malaysia - Kuala Lumpur
+    #     # Americas
+    #     '.TO',  # Canada - Toronto
+    #     '.V',   # Canada - Venture
+    #     '.SA',  # Brazil - Sao Paulo
+    #     '.MX',  # Mexico
+    #     # Middle East & Africa
+    #     '.TA',  # Israel - Tel Aviv
+    #     '.SR',  # Saudi Arabia
+    #     '.AD',  # Abu Dhabi
+    #     '.DU',  # Dubai
+    # ]
+
+    # def fetch_symbol(symbol):
+    #     """Fetch a single symbol — returns result or None"""
+    #     try:
+    #         ticker = yf.Ticker(symbol)
+    #         info   = ticker.fast_info
+    #         price  = getattr(info, 'last_price', None)
+
+    #         if not price or price <= 0:
+    #             return None
+
+    #         # Get full info for name and details
+    #         full   = ticker.info
+    #         name   = full.get('longName') or full.get('shortName', '')
+
+    #         if not name:
+    #             return None
+
+    #         # Determine country flag
+    #         exchange = full.get('exchange', '')
+    #         country  = full.get('country', '')
+
+    #         flag_map = {
+    #             'NSE': '🇮🇳', 'BSE': '🇮🇳',
+    #             'NMS': '🇺🇸', 'NYQ': '🇺🇸', 'NGM': '🇺🇸', 'NCM': '🇺🇸',
+    #             'LSE': '🇬🇧',
+    #             'GER': '🇩🇪', 'XET': '🇩🇪',
+    #             'PAR': '🇫🇷',
+    #             'MIL': '🇮🇹',
+    #             'MCE': '🇪🇸',
+    #             'AMS': '🇳🇱',
+    #             'SWX': '🇨🇭',
+    #             'TYO': '🇯🇵',
+    #             'HKG': '🇭🇰',
+    #             'SHH': '🇨🇳', 'SHZ': '🇨🇳',
+    #             'KSC': '🇰🇷', 'KOE': '🇰🇷',
+    #             'ASX': '🇦🇺',
+    #             'TOR': '🇨🇦', 'VAN': '🇨🇦',
+    #             'SAO': '🇧🇷',
+    #             'SIN': '🇸🇬',
+    #         }
+
+    #         country_map = {
+    #             'India': '🇮🇳',
+    #             'United States': '🇺🇸',
+    #             'United Kingdom': '🇬🇧',
+    #             'Germany': '🇩🇪',
+    #             'France': '🇫🇷',
+    #             'Japan': '🇯🇵',
+    #             'Hong Kong': '🇭🇰',
+    #             'China': '🇨🇳',
+    #             'Australia': '🇦🇺',
+    #             'Canada': '🇨🇦',
+    #             'Singapore': '🇸🇬',
+    #             'South Korea': '🇰🇷',
+    #         }
+
+    #         flag = flag_map.get(exchange) or country_map.get(country, '🌍')
+
+    #         currency    = full.get('currency', '')
+    #         sector      = full.get('sector', '')
+    #         market_cap  = full.get('marketCap', 0)
+
+    #         currency_symbol = {
+    #             'INR': '₹', 'USD': '$', 'GBP': '£', 'GBp': 'p',
+    #             'EUR': '€', 'JPY': '¥', 'HKD': 'HK$', 'AUD': 'A$',
+    #             'CAD': 'C$', 'SGD': 'S$', 'CNY': '¥', 'KRW': '₩'
+    #         }.get(currency, currency + ' ')
+
+    #         return {
+    #             "symbol":          symbol,
+    #             "name":            name,
+    #             "price":           round(float(price), 2),
+    #             "currency":        currency,
+    #             "currency_symbol": currency_symbol,
+    #             "exchange":        exchange,
+    #             "country":         country,
+    #             "flag":            flag,
+    #             "sector":          sector,
+    #             "market_cap":      market_cap,
+    #         }
+    #     except Exception:
+    #         return None
+
+    # # Build all symbols to try
+    # symbols_to_try = [f"{query}{suffix}" for suffix in SUFFIXES]
+
+    # # Search in parallel using thread pool
+    # results = []
+    # with ThreadPoolExecutor(max_workers=10) as executor:
+    #     futures = {executor.submit(fetch_symbol, sym): sym for sym in symbols_to_try}
+    #     for future in futures:
+    #         result = future.result()
+    #         if result:
+    #             results.append(result)
+
+    # # Sort by market cap (largest first) so most relevant appears first
+    # results.sort(key=lambda x: x.get('market_cap', 0) or 0, reverse=True)
+
+    # return {
+    #     "query":   query,
+    #     "count":   len(results),
+    #     "results": results
+    # }
+
+
+import json
+
+# Load search index on startup
+SEARCH_INDEX = []
+SEARCH_INDEX_PATH = os.path.join(BASE_DIR, 'data', 'search_index.json')
+
+def load_search_index():
+    global SEARCH_INDEX
+    try:
+        with open(SEARCH_INDEX_PATH, 'r') as f:
+            SEARCH_INDEX = json.load(f)
+        print(f"  Search index loaded: {len(SEARCH_INDEX)} stocks")
+    except Exception as e:
+        print(f"  Search index not found: {e}")
+        SEARCH_INDEX = []
+
+load_search_index()
+
+@app.get("/search")
+def search_stocks(query: str):
+    """
+    Searches the pre-built stock index by name OR symbol.
+    Covers NSE, BSE, NYSE, NASDAQ stocks.
+    """
+    if not query or len(query.strip()) < 1:
+        raise HTTPException(status_code=400, detail="Query required")
+
+    q = query.strip().lower()
+
+    results = []
+    for stock in SEARCH_INDEX:
+        sym  = stock.get('symbol', '').lower()
+        name = stock.get('name', '').lower()
+
+        # Match by symbol start, symbol contains, or name contains
+        if (sym.startswith(q) or
+            q in sym.replace('.ns','').replace('.bo','') or
+            q in name):
+            results.append(stock)
+
+    # Sort — exact symbol matches first, then by name
+    results.sort(key=lambda x: (
+        not x['symbol'].lower().startswith(q),
+        not x['symbol'].lower().replace('.ns','').replace('.bo','').startswith(q),
+        x['name']
+    ))
+
+    return {
+        "query":   query,
+        "count":   len(results[:20]),
+        "results": results[:20]
+    }

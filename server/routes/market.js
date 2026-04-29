@@ -72,4 +72,24 @@ router.get('/symbols', (req, res) => {
   })
 })
 
+
+// GET /api/market/search?query=adani
+// Searches all global exchanges simultaneously
+router.get('/search', async (req, res) => {
+  try {
+    const { query } = req.query
+    if (!query || query.trim().length < 1) {
+      return res.status(400).json({ error: 'Query required' })
+    }
+    const response = await axios.get(
+      `${ML_API}/search?query=${encodeURIComponent(query.trim())}`,
+      { timeout: 30000 }
+    )
+    res.json(response.data)
+  } catch (err) {
+    res.status(500).json({ error: 'Search failed', details: err.message })
+  }
+})
+
+
 module.exports = router

@@ -1,144 +1,220 @@
 import { useState } from 'react'
 import useStore from '../../store'
-import { portfolioAPI } from '../../services/api'
+import { trackAPI, watchlistAPI } from '../../services/api'
+import AuthModal from '../auth/AuthModal'
 
-export default function OrderPanel() {
+export default function ActionPanel() {
   const currentData    = useStore(s => s.currentData)
   const currentSymbol  = useStore(s => s.currentSymbol)
-  const portfolio      = useStore(s => s.portfolio)
-  const setPortfolio   = useStore(s => s.setPortfolio)
-  const orderSide      = useStore(s => s.orderSide)
-  const setOrderSide   = useStore(s => s.setOrderSide)
   const token          = useStore(s => s.token)
+  const setWatchlist   = useStore(s => s.setWatchlist)
+  const watchlist      = useStore(s => s.watchlist)
+  const trackedSymbols         = useStore(s => s.trackedSymbols)
+  const addTrackedPrediction   = useStore(s => s.addTrackedPrediction)
+  const removeTrackedPrediction = useStore(s => s.removeTrackedPrediction)
+  const trackedPredictions     = useStore(s => s.trackedPredictions)
 
-  const [shares,  setShares]  = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState(null)
+  const [tracking,  setTracking]  = useState(false)
+  const [adding,    setAdding]    = useState(false)
+  const [message,   setMessage]   = useState(null)
+  const [showAuth,  setShowAuth]  = useState(false)
 
-  const price    = currentData?.current_price || 0
-  const total    = price * shares
-  const currency = currentSymbol?.includes('.NS') ? '₹' : '$'
-  const cash     = portfolio?.cash || 100000
+  const currency  = currentSymbol?.includes('.NS') ? '₹' : '$'
+  const price     = currentData?.current_price || 0
+  const symClean  = currentSymbol?.replace('.NS','').replace('.BO','')
+  const isInWatch = watchlist.find(w => w.symbol === currentSymbol)
+  const isTracked = trackedSymbols.includes(currentSymbol)
+  const bestPred  = currentData?.predictions?.find(p => p.horizon === 'Medium-term')
+    || currentData?.predictions?.[0]
 
-  const placeOrder = async () => {
+  const showMessage = (type, text) => {
+    setMessage({ type, text })
+    setTimeout(() => setMessage(null), 3000)
+  }
+
+  const handleTrack = async () => {
+    // ── Not logged in → show login modal, do nothing else ──
     if (!token) {
-      setMessage({ type: 'error', text: 'Please login to trade' })
+      setShowAuth(true)
       return
     }
-    if (!currentSymbol || shares < 1) return
 
-    setLoading(true)
-    setMessage(null)
+    if (!currentData || !bestPred) return
 
+    // ── Already tracking → stop tracking ──
+    if (isTracked) {
+      const pred = trackedPredictions.find(
+        p => p.symbol === currentSymbol && p.outcome === 'PENDING'
+      )
+      if (pred) {
+        try {
+          await trackAPI.delete(pred._id)
+          removeTrackedPrediction(pred._id, currentSymbol)
+          showMessage('success', `Stopped tracking ${symClean}`)
+        } catch {
+          showMessage('error', 'Failed to stop tracking')
+        }
+      }
+      return
+    }
+
+    // ── Track new prediction ──
+    setTracking(true)
     try {
-      await portfolioAPI.placeOrder({
-        symbol: currentSymbol,
-        side:   orderSide,
-        shares: parseInt(shares)
+      const res = await trackAPI.track({
+        symbol:       currentSymbol,
+        name:         symClean,
+        signal:       bestPred.signal,
+        confidence:   bestPred.confidence,
+        horizon:      bestPred.horizon,
+        days:         bestPred.days,
+        priceAtTrack: price,
       })
-
-      // Refresh portfolio
-      const res = await portfolioAPI.getPortfolio()
-      setPortfolio(res.data)
-
-      setMessage({
-        type: 'success',
-        text: `${orderSide.toUpperCase()} ${shares} ${currentSymbol} @ ${currency}${price.toLocaleString()}`
-      })
+      // Add to store immediately — real time update
+      addTrackedPrediction(res.data.prediction)
+      showMessage('success',
+        `Tracking ${bestPred.signal} for ${symClean}! Check back in ${bestPred.days} days.`
+      )
     } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.error || 'Order failed'
-      })
+      showMessage('error', err.response?.data?.error || 'Failed to track')
     } finally {
-      setLoading(false)
+      setTracking(false)
+    }
+  }
+
+  const handleWatchlist = async () => {
+    if (!currentSymbol) return
+    setAdding(true)
+    try {
+      if (isInWatch) {
+        setWatchlist(watchlist.filter(w => w.symbol !== currentSymbol), !token)
+        if (token) await watchlistAPI.remove(currentSymbol)
+        showMessage('success', `${symClean} removed from watchlist`)
+      } else {
+        const newItem = { symbol: currentSymbol, name: symClean }
+        setWatchlist([...watchlist, newItem], !token)
+        if (token) await watchlistAPI.add(currentSymbol, symClean)
+        showMessage('success',
+          token
+            ? `${symClean} added to watchlist!`
+            : `${symClean} added! Login to save permanently.`
+        )
+      }
+    } catch {
+      const res = await watchlistAPI.get()
+      setWatchlist(res.data.isDefault ? [] : res.data.watchlist, res.data.isDefault)
+      showMessage('error', 'Failed to update watchlist')
+    } finally {
+      setAdding(false)
     }
   }
 
   return (
-    <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '10px' }}>Place Order</div>
+    <>
+      <div style={{ padding: '14px', borderBottom: '1px solid var(--border)' }}>
 
-      {/* Buy/Sell tabs */}
-      <div style={{
-        display: 'flex', background: 'var(--bg3)',
-        borderRadius: '7px', padding: '3px', marginBottom: '10px'
-      }}>
-        {['buy', 'sell'].map(side => (
-          <button key={side} onClick={() => setOrderSide(side)} style={{
-            flex: 1, padding: '6px', borderRadius: '5px',
-            border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
-            transition: 'all 0.12s',
-            background: orderSide === side
-              ? side === 'buy' ? 'rgba(0,212,160,0.15)' : 'rgba(255,77,106,0.15)'
-              : 'transparent',
-            color: orderSide === side
-              ? side === 'buy' ? 'var(--green)' : 'var(--red)'
-              : 'var(--muted)',
-          }}>{side.toUpperCase()}</button>
-        ))}
-      </div>
+        {/* Stock info */}
+        {currentData && (
+          <div style={{
+            background: 'var(--bg3)', borderRadius: '10px',
+            padding: '12px', marginBottom: '12px',
+            border: '1px solid var(--border)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div style={{ fontWeight: '700', fontSize: '15px' }}>{symClean}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '15px', fontWeight: '500' }}>
+                {currency}{price?.toLocaleString()}
+              </div>
+            </div>
+            {bestPred && (
+              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                AI says:{' '}
+                <span style={{
+                  color: bestPred.signal === 'BUY' ? 'var(--green)'
+                       : bestPred.signal === 'SELL' ? 'var(--red)' : 'var(--amber)',
+                  fontWeight: '600'
+                }}>{bestPred.signal}</span>
+                {' '}· {bestPred.confidence}% confident · {bestPred.horizon}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Symbol */}
-      <div style={{ marginBottom: '8px' }}>
-        <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Symbol</div>
-        <div style={{
-          background: 'var(--bg3)', border: '1px solid var(--border2)',
-          borderRadius: '7px', padding: '8px 10px',
-          fontFamily: 'var(--mono)', fontSize: '13px', color: 'var(--text)'
-        }}>{currentSymbol || '---'}</div>
-      </div>
-
-      {/* Shares input */}
-      <div style={{ marginBottom: '8px' }}>
-        <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Shares</div>
-        <input
-          type="number" min="1" value={shares}
-          onChange={e => setShares(Math.max(1, parseInt(e.target.value) || 1))}
+        {/* Track Prediction button */}
+        <button
+          onClick={handleTrack}
+          disabled={tracking || !currentData || !bestPred}
           style={{
-            width: '100%', background: 'var(--bg3)',
-            border: '1px solid var(--border2)', borderRadius: '7px',
-            padding: '8px 10px', color: 'var(--text)',
-            fontFamily: 'var(--mono)', fontSize: '13px', outline: 'none'
+            width: '100%', padding: '11px', borderRadius: '9px',
+            border: isTracked ? '1px solid rgba(255,77,106,0.3)' : 'none',
+            cursor: tracking || !currentData ? 'not-allowed' : 'pointer',
+            fontSize: '13px', fontWeight: '700',
+            background: isTracked
+              ? 'rgba(255,77,106,0.1)'
+              : 'linear-gradient(135deg, #2563eb, #8b5cf6)',
+            color: isTracked ? 'var(--red)' : '#fff',
+            opacity: tracking || !currentData ? 0.6 : 1,
+            marginBottom: '6px', transition: 'all 0.15s'
           }}
-        />
+        >
+          {tracking ? 'Processing...'
+            : isTracked ? '✕ Stop Tracking'
+            : '📊 Track This Prediction'}
+        </button>
+
+        {/* Login hint under track button */}
+        {!token && (
+          <div style={{
+            fontSize: '10px', color: 'var(--muted2)',
+            textAlign: 'center', marginBottom: '8px'
+          }}>
+            🔒 Login required to track predictions
+          </div>
+        )}
+
+        {/* Watchlist button */}
+        <button
+          onClick={handleWatchlist}
+          disabled={adding || !currentSymbol}
+          style={{
+            width: '100%', padding: '10px', borderRadius: '9px',
+            border: `1px solid ${isInWatch ? 'rgba(255,77,106,0.3)' : 'rgba(59,130,246,0.3)'}`,
+            cursor: adding || !currentSymbol ? 'not-allowed' : 'pointer',
+            fontSize: '13px', fontWeight: '600',
+            background: isInWatch ? 'rgba(255,77,106,0.1)' : 'rgba(59,130,246,0.1)',
+            color: isInWatch ? 'var(--red)' : 'var(--blue)',
+            opacity: adding || !currentSymbol ? 0.6 : 1,
+            transition: 'all 0.15s'
+          }}
+        >
+          {adding ? 'Updating...'
+            : isInWatch ? '✕ Remove from Watchlist'
+            : '+ Add to Watchlist'}
+        </button>
+
+        {!token && !isInWatch && (
+          <div style={{
+            fontSize: '10px', color: 'var(--muted2)',
+            textAlign: 'center', marginTop: '6px'
+          }}>
+            Login to save watchlist permanently
+          </div>
+        )}
+
+        {/* Message */}
+        {message && (
+          <div style={{
+            marginTop: '10px', padding: '9px 12px', borderRadius: '7px',
+            fontSize: '12px',
+            background: message.type === 'success' ? 'rgba(0,212,160,0.1)' : 'rgba(255,77,106,0.1)',
+            color: message.type === 'success' ? 'var(--green)' : 'var(--red)',
+            border: `1px solid ${message.type === 'success' ? 'rgba(0,212,160,0.2)' : 'rgba(255,77,106,0.2)'}`,
+            lineHeight: '1.4'
+          }}>{message.text}</div>
+        )}
       </div>
 
-      {/* Estimated total */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        fontSize: '11px', marginBottom: '10px'
-      }}>
-        <span style={{ color: 'var(--muted)' }}>Est. Total</span>
-        <span style={{ fontFamily: 'var(--mono)', color: orderSide === 'buy' ? 'var(--green)' : 'var(--red)' }}>
-          {currency}{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-      </div>
-
-      {/* Order button */}
-      <button onClick={placeOrder} disabled={loading || !currentData} style={{
-        width: '100%', padding: '10px', borderRadius: '8px',
-        border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-        fontSize: '13px', fontWeight: '700', letterSpacing: '0.3px',
-        background: orderSide === 'buy'
-          ? 'linear-gradient(135deg, #00a87e, #00d4a0)'
-          : 'linear-gradient(135deg, #cc3d56, #ff4d6a)',
-        color: orderSide === 'buy' ? '#001a12' : '#fff',
-        opacity: loading || !currentData ? 0.6 : 1,
-        transition: 'all 0.15s'
-      }}>
-        {loading ? 'Processing...' : `${orderSide.toUpperCase()} ${shares} SHARE${shares > 1 ? 'S' : ''}`}
-      </button>
-
-      {/* Message */}
-      {message && (
-        <div style={{
-          marginTop: '8px', padding: '8px 10px', borderRadius: '6px', fontSize: '11px',
-          background: message.type === 'success' ? 'rgba(0,212,160,0.1)' : 'rgba(255,77,106,0.1)',
-          color: message.type === 'success' ? 'var(--green)' : 'var(--red)',
-          border: `1px solid ${message.type === 'success' ? 'rgba(0,212,160,0.2)' : 'rgba(255,77,106,0.2)'}`,
-        }}>{message.text}</div>
-      )}
-    </div>
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+    </>
   )
 }
