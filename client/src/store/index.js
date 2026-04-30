@@ -35,6 +35,8 @@ const useStore = create((set, get) => ({
   // ── Market ────────────────────────────────────────────────────
   currentSymbol: 'TCS.NS',
   currentData:   null,
+  currentName:    'Tata Consultancy Services',
+  setCurrentName: (name) => set({ currentName: name }),
   prices:        {},
   isLoading:     false,
   error:         null,

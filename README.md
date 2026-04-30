@@ -256,5 +256,5 @@ TradeVest is an educational project. All predictions are AI-generated estimates 
 **Viraj Shah**  
 [GitHub](https://github.com/vshah2690) · [LinkedIn](https://linkedin.com/in/virajshah)
 
-**Vrajrajsinh Rathod**
+**Vrajrajsinh Rathod**  
 [GitHub](https://github.com/Vrajrajsinh-Rathod) · [LinkedIn](https://www.linkedin.com/in/vrajrajsinh/)
