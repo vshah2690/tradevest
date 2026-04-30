@@ -78,6 +78,17 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
 
+    // GET /api/auth/me — verify token and return user
+    router.get('/me', auth, async (req, res) => {
+      try {
+        const user = await User.findById(req.userId).select('-passwordHash')
+        if (!user) return res.status(404).json({ error: 'User not found' })
+        res.json({ user })
+      } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch user' })
+      }
+    })
+
     // Generate JWT
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' })
 

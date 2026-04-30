@@ -2,21 +2,31 @@ import { useEffect } from 'react'
 import useStore from './store'
 import useWebSocket from './hooks/useWebSocket'
 import usePrediction from './hooks/usePrediction'
+import { authAPI } from './services/api'
 
-import Navbar        from './components/layout/Navbar'
-import Sidebar       from './components/layout/Sidebar'
-import PriceChart    from './components/chart/PriceChart'
-import SignalPanel   from './components/ai/SignalPanel'
-import OrderPanel    from './components/trading/OrderPanel'
+import Navbar         from './components/layout/Navbar'
+import Sidebar        from './components/layout/Sidebar'
+import PriceChart     from './components/chart/PriceChart'
+import SignalPanel    from './components/ai/SignalPanel'
+import OrderPanel     from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
-import ActionPanel   from './components/trading/OrderPanel'
-import TrackedPanel  from './components/trading/PortfolioPanel'
 
 export default function App() {
   const { predict } = usePrediction()
+  const token       = useStore(s => s.token)
+  const setAuth     = useStore(s => s.setAuth)
+  const logout      = useStore(s => s.logout)
 
   // Connect WebSocket for live prices
   useWebSocket()
+
+  // Verify token on page load — restores user session after refresh
+  useEffect(() => {
+    if (!token) return
+    authAPI.me()
+      .then(res => setAuth(res.data.user, token))
+      .catch(() => logout())
+  }, [])
 
   // Load initial prediction on mount
   useEffect(() => {
@@ -25,7 +35,7 @@ export default function App() {
 
   return (
     <div style={{
-      display: 'grid',
+      display:             'grid',
       gridTemplateColumns: '200px 1fr 280px',
       gridTemplateRows:    '48px 1fr',
       height:              '100vh',
@@ -47,20 +57,14 @@ export default function App() {
         overflow:      'hidden',
       }}>
         {/* Chart area */}
-        {/* <div style={{
-          flex:    1,
-          padding: '16px',
-          overflow: 'hidden',
-        }}> */}
-        {/* Chart area */}
         <div style={{
-          flex:      1,
-          padding:   '16px',
-          overflow:  'hidden',
-          minHeight: 0,
-          display:   'flex',
+          flex:          1,
+          padding:       '16px',
+          overflow:      'hidden',
+          minHeight:     0,
+          display:       'flex',
           flexDirection: 'column',
-          }}>
+        }}>
           <PriceChart />
         </div>
 
@@ -68,13 +72,13 @@ export default function App() {
         <SignalPanel />
       </main>
 
-      {/* Right panel — order + portfolio */}
+      {/* Right panel — action + tracked predictions */}
       <div style={{
-        background:   'var(--bg2)',
-        borderLeft:   '1px solid var(--border)',
-        display:      'flex',
+        background:    'var(--bg2)',
+        borderLeft:    '1px solid var(--border)',
+        display:       'flex',
         flexDirection: 'column',
-        overflow:     'hidden',
+        overflow:      'hidden',
       }}>
         <OrderPanel />
         <PortfolioPanel />

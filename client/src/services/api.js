@@ -49,4 +49,10 @@ export const trackAPI = {
   delete: (id)   => API.delete(`/track/${id}`),
 }
 
+export const authAPI = {
+  register: (data) => API.post('/auth/register', data),
+  login:    (data) => API.post('/auth/login', data),
+  me:       ()     => API.get('/auth/me'),
+}
+
 export default API
