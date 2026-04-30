@@ -8,7 +8,6 @@ const API = axios.create({
 
 // Attach JWT token to every request
 API.interceptors.request.use(config => {
-  // Read from localStorage first, fallback to store
   const token = localStorage.getItem('tradevest_token')
     || useStore.getState().token
   if (token) config.headers.Authorization = `Bearer ${token}`
@@ -29,6 +28,7 @@ export const predictAPI = {
 export const authAPI = {
   register: (data) => API.post('/auth/register', data),
   login:    (data) => API.post('/auth/login', data),
+  me:       ()     => API.get('/auth/me'),
 }
 
 export const portfolioAPI = {
@@ -47,12 +47,6 @@ export const trackAPI = {
   track:  (data) => API.post('/track', data),
   getAll: ()     => API.get('/track'),
   delete: (id)   => API.delete(`/track/${id}`),
-}
-
-export const authAPI = {
-  register: (data) => API.post('/auth/register', data),
-  login:    (data) => API.post('/auth/login', data),
-  me:       ()     => API.get('/auth/me'),
 }
 
 export default API
