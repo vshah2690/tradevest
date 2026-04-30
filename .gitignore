@@ -1,7 +1,8 @@
 # Python
 machine_learning/venv/
 machine_learning/__pycache__/
-machine_learning/data/
+machine_learning/data/*.csv
+!machine_learning/data/search_index.json
 *.pyc
 *.pyo
 
