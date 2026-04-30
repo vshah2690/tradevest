@@ -4,9 +4,9 @@ import usePrediction from '../../hooks/usePrediction'
 import { watchlistAPI } from '../../services/api'
 
 const DEFAULT_STOCKS = [
-  { symbol: 'TCS.NS',      name: 'Tata Consultancy' },
+  { symbol: 'TCS.NS',      name: 'Tata Consultancy Services' },
   { symbol: 'INFY.NS',     name: 'Infosys' },
-  { symbol: 'RELIANCE.NS', name: 'Reliance Ind.' },
+  { symbol: 'RELIANCE.NS', name: 'Reliance Industries' },
   { symbol: 'HDFCBANK.NS', name: 'HDFC Bank' },
   { symbol: 'AAPL',        name: 'Apple Inc' },
   { symbol: 'MSFT',        name: 'Microsoft' },
@@ -21,16 +21,16 @@ const COLORS = [
   '#ec4899', '#6366f1'
 ]
 
-function StockItem({ stock, idx, isActive, onSelect, onRemove, showRemove, currency }) {
-  const prices  = useStore(s => s.prices)
-  const p       = prices[stock.symbol]
-  const color   = COLORS[idx % COLORS.length]
+function StockItem({ stock, idx, isActive, onSelect, onRemove, showRemove }) {
+  const prices   = useStore(s => s.prices)
+  const p        = prices[stock.symbol]
+  const color    = COLORS[idx % COLORS.length]
   const initials = stock.symbol.replace('.NS','').replace('.BO','').slice(0, 2)
-  const curr    = stock.symbol.includes('.NS') || stock.symbol.includes('.BO') ? '₹' : '$'
+  const curr     = stock.symbol.includes('.NS') || stock.symbol.includes('.BO') ? '₹' : '$'
 
   return (
     <div
-      onClick={() => onSelect(stock.symbol)}
+      onClick={() => onSelect(stock.symbol, stock.name)}
       style={{
         display:    'flex',
         alignItems: 'center',
@@ -96,13 +96,13 @@ function StockItem({ stock, idx, isActive, onSelect, onRemove, showRemove, curre
 export default function Sidebar() {
   const currentSymbol    = useStore(s => s.currentSymbol)
   const setCurrentSymbol = useStore(s => s.setCurrentSymbol)
+  const setCurrentName   = useStore(s => s.setCurrentName)
   const token            = useStore(s => s.token)
   const watchlist        = useStore(s => s.watchlist)
   const setWatchlist     = useStore(s => s.setWatchlist)
   const { predict }      = usePrediction()
   const [popularOpen, setPopularOpen] = useState(true)
 
-  // Load personal watchlist on mount / login change
   useEffect(() => {
     if (!token) {
       setWatchlist([], true)
@@ -110,25 +110,23 @@ export default function Sidebar() {
     }
     watchlistAPI.get()
       .then(res => {
-        // Only set personal watchlist — not defaults
         const personal = res.data.isDefault ? [] : res.data.watchlist
         setWatchlist(personal, res.data.isDefault)
       })
       .catch(() => setWatchlist([], true))
   }, [token])
 
-  const handleSelect = (sym) => {
+  const handleSelect = (sym, name) => {
     setCurrentSymbol(sym)
+    setCurrentName(name || sym)
     predict(sym)
   }
 
   const handleRemove = async (symbol) => {
-    // Optimistic update — remove immediately
     setWatchlist(watchlist.filter(w => w.symbol !== symbol), false)
     try {
       await watchlistAPI.remove(symbol)
     } catch {
-      // Revert on error
       const res = await watchlistAPI.get()
       setWatchlist(res.data.isDefault ? [] : res.data.watchlist, res.data.isDefault)
     }
@@ -142,7 +140,7 @@ export default function Sidebar() {
       flexDirection: 'column',
       overflow:      'hidden',
     }}>
-      {/* ── MY WATCHLIST ─────────────────────────────── */}
+      {/* MY WATCHLIST */}
       <div style={{
         padding:       '10px 12px 6px',
         fontSize:      '10px', fontWeight: '600',
@@ -159,7 +157,6 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Personal watchlist items */}
       <div style={{ minHeight: watchlist.length > 0 ? 'auto' : '48px' }}>
         {watchlist.length === 0 ? (
           <div style={{
@@ -196,21 +193,17 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* ── POPULAR STOCKS (collapsible) ─────────────── */}
+      {/* POPULAR STOCKS */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderTop: '1px solid var(--border)' }}>
-
-        {/* Collapsible header */}
         <div
           onClick={() => setPopularOpen(!popularOpen)}
           style={{
             padding:       '8px 12px',
             fontSize:      '10px', fontWeight: '600',
             letterSpacing: '1px', color: 'var(--muted)',
-            textTransform: 'uppercase',
-            cursor:        'pointer',
+            textTransform: 'uppercase', cursor: 'pointer',
             display:       'flex', justifyContent: 'space-between', alignItems: 'center',
-            userSelect:    'none',
-            transition:    'background 0.12s',
+            userSelect:    'none', transition: 'background 0.12s',
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -218,13 +211,11 @@ export default function Sidebar() {
           <span>Popular Stocks</span>
           <span style={{
             fontSize: '12px', color: 'var(--muted2)',
-            transition: 'transform 0.2s',
-            display: 'inline-block',
+            transition: 'transform 0.2s', display: 'inline-block',
             transform: popularOpen ? 'rotate(180deg)' : 'rotate(0deg)'
           }}>▾</span>
         </div>
 
-        {/* Popular stocks list */}
         {popularOpen && (
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {DEFAULT_STOCKS.map((stock, idx) => (

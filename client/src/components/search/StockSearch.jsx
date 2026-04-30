@@ -12,6 +12,7 @@ export default function StockSearch() {
   const searchTimer               = useRef(null)
   const setCurrentSymbol          = useStore(s => s.setCurrentSymbol)
   const { predict }               = usePrediction()
+  const setCurrentName = useStore(s => s.setCurrentName)
 
   useEffect(() => {
     if (!query.trim() || query.length < 1) {
@@ -34,11 +35,12 @@ export default function StockSearch() {
       } finally {
         setSearching(false)
       }
-    }, 800)
+    }, 400)
   }, [query])
 
   const handleSelect = (stock) => {
     setCurrentSymbol(stock.symbol)
+    setCurrentName(stock.name || stock.symbol)
     predict(stock.symbol)
     setQuery('')
     setOpen(false)

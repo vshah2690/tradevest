@@ -408,8 +408,16 @@ def fetch_and_predict(symbol: str) -> dict:
     else:
         overall_signal = "HOLD"
 
+    # Get company name from yfinance
+    try:
+        ticker_info  = yf.Ticker(symbol).info
+        company_name = ticker_info.get('longName') or ticker_info.get('shortName', '')
+    except:
+        company_name = ''
+
     return {
         "symbol":           symbol.upper(),
+        "name":             company_name,
         "timestamp":        datetime.now().isoformat(),
         "current_price":    round(current_price, 2),
         "price_change":     round(price_change, 2),
@@ -492,42 +500,6 @@ def predict(request: PredictRequest):
 
     return fetch_and_predict(symbol)
 
-# @app.get("/history/{symbol}")
-# def get_history(symbol: str, days: int = 90):
-#     """
-#     Returns real historical OHLCV data for charting.
-#     """
-#     try:
-#         df = yf.download(symbol, period='6mo', interval='1d',
-#                         auto_adjust=True, progress=False)
-#         if df.empty:
-#             raise HTTPException(status_code=404, detail=f"No data for {symbol}")
-
-#         if isinstance(df.columns, pd.MultiIndex):
-#             df.columns = df.columns.get_level_values(0)
-
-#         df = df.tail(days)
-#         df.index = pd.to_datetime(df.index)
-
-#         history = [
-#             {
-#                 "date":   row.Index.strftime('%b %d'),
-#                 "open":   round(float(row.Open), 2),
-#                 "high":   round(float(row.High), 2),
-#                 "low":    round(float(row.Low), 2),
-#                 "close":  round(float(row.Close), 2),
-#                 "volume": int(row.Volume)
-#             }
-#             for row in df.itertuples()
-#         ]
-
-#         return {
-#             "symbol":  symbol,
-#             "history": history,
-#             "count":   len(history)
-#         }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/history/{symbol}")
 def get_history(symbol: str, days: int = 90):
@@ -583,169 +555,6 @@ def predict_get(symbol: str):
     Example: GET /predict/TCS.NS
     """
     return fetch_and_predict(symbol.strip().upper())
-
-
-# @app.get("/search")
-# async def search_stocks(query: str):
-    # """
-    # Global stock search — searches across all major exchanges simultaneously.
-    # Returns results with exchange, country, and live price.
-    # """
-    # import yfinance as yf
-    # import asyncio
-    # from concurrent.futures import ThreadPoolExecutor
-
-    # query = query.strip().upper()
-    # if not query:
-    #     raise HTTPException(status_code=400, detail="Query required")
-
-    # # All suffixes to try — covers every major exchange globally
-    # SUFFIXES = [
-    #     # India
-    #     '.NS', '.BO',
-    #     # US — no suffix
-    #     '',
-    #     # Europe
-    #     '.L',   # UK - London
-    #     '.DE',  # Germany - XETRA
-    #     '.PA',  # France - Paris
-    #     '.MI',  # Italy - Milan
-    #     '.MC',  # Spain - Madrid
-    #     '.AS',  # Netherlands - Amsterdam
-    #     '.BR',  # Belgium - Brussels
-    #     '.SW',  # Switzerland
-    #     '.OL',  # Norway - Oslo
-    #     '.ST',  # Sweden - Stockholm
-    #     '.HE',  # Finland - Helsinki
-    #     '.CO',  # Denmark - Copenhagen
-    #     # Asia Pacific
-    #     '.T',   # Japan - Tokyo
-    #     '.HK',  # Hong Kong
-    #     '.SS',  # China - Shanghai
-    #     '.SZ',  # China - Shenzhen
-    #     '.KS',  # South Korea
-    #     '.KQ',  # South Korea - KOSDAQ
-    #     '.AX',  # Australia - ASX
-    #     '.NZ',  # New Zealand
-    #     '.SI',  # Singapore
-    #     '.BK',  # Thailand - Bangkok
-    #     '.JK',  # Indonesia - Jakarta
-    #     '.KL',  # Malaysia - Kuala Lumpur
-    #     # Americas
-    #     '.TO',  # Canada - Toronto
-    #     '.V',   # Canada - Venture
-    #     '.SA',  # Brazil - Sao Paulo
-    #     '.MX',  # Mexico
-    #     # Middle East & Africa
-    #     '.TA',  # Israel - Tel Aviv
-    #     '.SR',  # Saudi Arabia
-    #     '.AD',  # Abu Dhabi
-    #     '.DU',  # Dubai
-    # ]
-
-    # def fetch_symbol(symbol):
-    #     """Fetch a single symbol — returns result or None"""
-    #     try:
-    #         ticker = yf.Ticker(symbol)
-    #         info   = ticker.fast_info
-    #         price  = getattr(info, 'last_price', None)
-
-    #         if not price or price <= 0:
-    #             return None
-
-    #         # Get full info for name and details
-    #         full   = ticker.info
-    #         name   = full.get('longName') or full.get('shortName', '')
-
-    #         if not name:
-    #             return None
-
-    #         # Determine country flag
-    #         exchange = full.get('exchange', '')
-    #         country  = full.get('country', '')
-
-    #         flag_map = {
-    #             'NSE': '🇮🇳', 'BSE': '🇮🇳',
-    #             'NMS': '🇺🇸', 'NYQ': '🇺🇸', 'NGM': '🇺🇸', 'NCM': '🇺🇸',
-    #             'LSE': '🇬🇧',
-    #             'GER': '🇩🇪', 'XET': '🇩🇪',
-    #             'PAR': '🇫🇷',
-    #             'MIL': '🇮🇹',
-    #             'MCE': '🇪🇸',
-    #             'AMS': '🇳🇱',
-    #             'SWX': '🇨🇭',
-    #             'TYO': '🇯🇵',
-    #             'HKG': '🇭🇰',
-    #             'SHH': '🇨🇳', 'SHZ': '🇨🇳',
-    #             'KSC': '🇰🇷', 'KOE': '🇰🇷',
-    #             'ASX': '🇦🇺',
-    #             'TOR': '🇨🇦', 'VAN': '🇨🇦',
-    #             'SAO': '🇧🇷',
-    #             'SIN': '🇸🇬',
-    #         }
-
-    #         country_map = {
-    #             'India': '🇮🇳',
-    #             'United States': '🇺🇸',
-    #             'United Kingdom': '🇬🇧',
-    #             'Germany': '🇩🇪',
-    #             'France': '🇫🇷',
-    #             'Japan': '🇯🇵',
-    #             'Hong Kong': '🇭🇰',
-    #             'China': '🇨🇳',
-    #             'Australia': '🇦🇺',
-    #             'Canada': '🇨🇦',
-    #             'Singapore': '🇸🇬',
-    #             'South Korea': '🇰🇷',
-    #         }
-
-    #         flag = flag_map.get(exchange) or country_map.get(country, '🌍')
-
-    #         currency    = full.get('currency', '')
-    #         sector      = full.get('sector', '')
-    #         market_cap  = full.get('marketCap', 0)
-
-    #         currency_symbol = {
-    #             'INR': '₹', 'USD': '$', 'GBP': '£', 'GBp': 'p',
-    #             'EUR': '€', 'JPY': '¥', 'HKD': 'HK$', 'AUD': 'A$',
-    #             'CAD': 'C$', 'SGD': 'S$', 'CNY': '¥', 'KRW': '₩'
-    #         }.get(currency, currency + ' ')
-
-    #         return {
-    #             "symbol":          symbol,
-    #             "name":            name,
-    #             "price":           round(float(price), 2),
-    #             "currency":        currency,
-    #             "currency_symbol": currency_symbol,
-    #             "exchange":        exchange,
-    #             "country":         country,
-    #             "flag":            flag,
-    #             "sector":          sector,
-    #             "market_cap":      market_cap,
-    #         }
-    #     except Exception:
-    #         return None
-
-    # # Build all symbols to try
-    # symbols_to_try = [f"{query}{suffix}" for suffix in SUFFIXES]
-
-    # # Search in parallel using thread pool
-    # results = []
-    # with ThreadPoolExecutor(max_workers=10) as executor:
-    #     futures = {executor.submit(fetch_symbol, sym): sym for sym in symbols_to_try}
-    #     for future in futures:
-    #         result = future.result()
-    #         if result:
-    #             results.append(result)
-
-    # # Sort by market cap (largest first) so most relevant appears first
-    # results.sort(key=lambda x: x.get('market_cap', 0) or 0, reverse=True)
-
-    # return {
-    #     "query":   query,
-    #     "count":   len(results),
-    #     "results": results
-    # }
 
 
 import json

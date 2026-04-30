@@ -10,6 +10,7 @@ export default function PriceChart() {
   const currentData    = useStore(s => s.currentData)
   const isLoading      = useStore(s => s.isLoading)
   const currentSymbol  = useStore(s => s.currentSymbol)
+  const currentName    = useStore(s => s.currentName)
   const [chartData,    setChartData]    = useState([])
   const [chartLoading, setChartLoading] = useState(false)
   const [activeTab,    setActiveTab]    = useState('1M')
@@ -37,21 +38,120 @@ export default function PriceChart() {
   }
 
   if (isLoading || chartLoading) {
+    const messages = [
+      "Fetching live market data...",
+      "Running AI models...",
+      "Computing 105 technical indicators...",
+      "Analysing 10 years of price history...",
+      "Calculating Fibonacci EMAs...",
+    ]
+    const msg = messages[Math.floor(Math.random() * messages.length)]
+
     return (
-      <div style={{
-        height: '100%', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        flexDirection: 'column', gap: '12px', color: 'var(--muted)'
-      }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Skeleton header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{
+              width: '80px', height: '22px',
+              background: 'var(--bg4)', borderRadius: '6px',
+              animation: 'shimmer 1.5s infinite'
+            }} />
+            <div style={{
+              width: '160px', height: '12px', marginTop: '6px',
+              background: 'var(--bg4)', borderRadius: '4px',
+              animation: 'shimmer 1.5s infinite'
+            }} />
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{
+              width: '120px', height: '28px',
+              background: 'var(--bg4)', borderRadius: '6px',
+              animation: 'shimmer 1.5s infinite'
+            }} />
+            <div style={{
+              width: '80px', height: '14px', marginTop: '6px', marginLeft: 'auto',
+              background: 'var(--bg4)', borderRadius: '4px',
+              animation: 'shimmer 1.5s infinite'
+            }} />
+          </div>
+        </div>
+
+        {/* Skeleton tabs */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {['1W','1M','3M','6M'].map(t => (
+            <div key={t} style={{
+              width: '36px', height: '24px',
+              background: 'var(--bg4)', borderRadius: '5px',
+              animation: 'shimmer 1.5s infinite'
+            }} />
+          ))}
+        </div>
+
+        {/* Skeleton chart with message */}
         <div style={{
-          width: '24px', height: '24px',
-          border: '2px solid var(--border2)',
-          borderTopColor: 'var(--blue)',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite'
-        }} />
-        <span style={{ fontSize: '12px' }}>Loading market data...</span>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          flex: 1, background: 'var(--bg3)',
+          borderRadius: '8px',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: '16px',
+          animation: 'shimmer 1.5s infinite'
+        }}>
+          {/* Animated bars */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '48px' }}>
+            {[35, 55, 45, 70, 40, 60, 50, 75, 45, 65, 55, 80].map((h, i) => (
+              <div key={i} style={{
+                width: '6px',
+                height: `${h}%`,
+                background: 'var(--blue)',
+                borderRadius: '3px 3px 0 0',
+                opacity: 0.4,
+                animation: `bar 1.2s ease-in-out ${i * 0.1}s infinite alternate`
+              }} />
+            ))}
+          </div>
+
+          {/* Loading message */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '13px', fontWeight: '600',
+              color: 'var(--text)', marginBottom: '6px'
+            }}>
+              TradeVest AI
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+              {msg}
+            </div>
+          </div>
+
+          {/* Progress dots */}
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{
+                width: '6px', height: '6px',
+                borderRadius: '50%',
+                background: 'var(--blue)',
+                animation: `dot 1.2s ease-in-out ${i * 0.4}s infinite alternate`
+              }} />
+            ))}
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes shimmer {
+            0%   { opacity: 1; }
+            50%  { opacity: 0.6; }
+            100% { opacity: 1; }
+          }
+          @keyframes bar {
+            0%   { opacity: 0.3; transform: scaleY(0.8); }
+            100% { opacity: 0.8; transform: scaleY(1.1); }
+          }
+          @keyframes dot {
+            0%   { opacity: 0.2; transform: scale(0.8); }
+            100% { opacity: 1;   transform: scale(1.2); }
+          }
+        `}</style>
       </div>
     )
   }
@@ -76,9 +176,22 @@ export default function PriceChart() {
         <div>
           <div style={{ fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>
             {currentSymbol?.replace('.NS', '').replace('.BO', '')}
+            {currentName && (
+              <span style={{
+                fontSize: '14px', fontWeight: '400',
+                color: 'var(--muted)', marginLeft: '8px'
+              }}>
+                ({currentName})
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
-            {currentData.data_rows_used} days historical data · Prices end-of-day
+            {/* {currentData.data_rows_used} days historical data · Prices end-of-day */}
+            {currentData.data_rows_used} days data · Last updated:{' '}
+            {new Date(currentData.timestamp).toLocaleTimeString('en-GB', {
+              hour: '2-digit', minute: '2-digit'
+            })}
+            {' '}· Prices end-of-day
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
