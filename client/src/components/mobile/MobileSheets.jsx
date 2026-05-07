@@ -7,7 +7,6 @@ import AuthModal from '../auth/AuthModal'
 function PredictionSheet({ onClose }) {
   const currentData             = useStore(s => s.currentData)
   const currentSymbol           = useStore(s => s.currentSymbol)
-  const prediction              = useStore(s => s.prediction)
   const token                   = useStore(s => s.token)
   const watchlist               = useStore(s => s.watchlist)
   const setWatchlist            = useStore(s => s.setWatchlist)
@@ -17,17 +16,47 @@ function PredictionSheet({ onClose }) {
   const trackedPredictions      = useStore(s => s.trackedPredictions)
 
   const [tracking, setTracking] = useState(false)
-  const [adding,   setAdding]   = useState(false)
   const [message,  setMessage]  = useState(null)
   const [showAuth, setShowAuth] = useState(false)
 
   const currency  = currentSymbol?.includes('.NS') ? '₹' : '$'
   const price     = currentData?.current_price || 0
   const symClean  = currentSymbol?.replace('.NS','').replace('.BO','')
-  const isInWatch = watchlist.find(w => w.symbol === currentSymbol)
   const isTracked = trackedSymbols.includes(currentSymbol)
-  const bestPred  = currentData?.predictions?.find(p => p.horizon === 'Medium-term')
-    || currentData?.predictions?.[0]
+
+  // ── Read predictions the same way SignalPanel does ──
+  const preds   = currentData?.predictions || []
+  const bestPred = preds.find(p => p.horizon === 'Medium-term') || preds[0]
+  const today   = preds.find(p => p.horizon === 'Intraday')    || {}
+  const week3   = preds.find(p => p.horizon === 'Short-term')  || {}
+  const week5   = preds.find(p => p.horizon === 'Medium-term') || {}
+
+  // ── Price range calculated same as SignalPanel ──
+  const priceRange = preds.length > 0 ? (() => {
+    const targets = preds.map(p => {
+      const prob = p.probability_up / 100
+      return p.signal === 'BUY'
+        ? price * (1 + (prob - 0.5) * 0.15)
+        : price * (1 - (0.5 - prob) * 0.15)
+    })
+    return {
+      low:  Math.min(...targets),
+      high: Math.max(...targets),
+    }
+  })() : null
+
+  const getColor = pct => {
+    if (!pct) return 'var(--muted)'
+    if (pct >= 70) return 'var(--green)'
+    if (pct >= 55) return '#f59e0b'
+    return 'var(--muted)'
+  }
+  const getLabel = pct => {
+    if (!pct) return ''
+    if (pct >= 70) return '🟩 Likely to go UP'
+    if (pct >= 55) return '🟦 Slight chance UP'
+    return '😕 Hard to predict'
+  }
 
   const showMsg = (type, text) => {
     setMessage({ type, text })
@@ -74,50 +103,6 @@ function PredictionSheet({ onClose }) {
     }
   }
 
-  const handleWatchlist = async () => {
-    if (!currentSymbol) return
-    setAdding(true)
-    try {
-      if (isInWatch) {
-        setWatchlist(watchlist.filter(w => w.symbol !== currentSymbol), !token)
-        if (token) await watchlistAPI.remove(currentSymbol)
-        showMsg('success', `${symClean} removed from watchlist`)
-      } else {
-        const newItem = { symbol: currentSymbol, name: symClean }
-        setWatchlist([...watchlist, newItem], !token)
-        if (token) await watchlistAPI.add(currentSymbol, symClean)
-        showMsg('success', token
-          ? `${symClean} added to watchlist!`
-          : `${symClean} added! Login to save permanently.`
-        )
-      }
-    } catch {
-      const res = await watchlistAPI.get()
-      setWatchlist(res.data.isDefault ? [] : res.data.watchlist, res.data.isDefault)
-      showMsg('error', 'Failed to update watchlist')
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  const breakdown = prediction?.breakdown || {}
-  const today = breakdown.day1 || {}
-  const week3 = breakdown.day3 || {}
-  const week5 = breakdown.day5 || {}
-
-  const getColor = pct => {
-    if (!pct) return 'var(--muted)'
-    if (pct >= 70) return 'var(--green)'
-    if (pct >= 55) return '#f59e0b'
-    return 'var(--muted)'
-  }
-  const getLabel = pct => {
-    if (!pct) return ''
-    if (pct >= 70) return '🟩 Likely to go UP'
-    if (pct >= 55) return '🟦 Slight chance UP'
-    return '😕 Hard to predict'
-  }
-
   return (
     <div className="ms-overlay" onClick={onClose}>
       <div className="ms-sheet" onClick={e => e.stopPropagation()}>
@@ -145,9 +130,9 @@ function PredictionSheet({ onClose }) {
         {/* Breakdown bars */}
         <div className="ms-pred-body">
           {[
-            { label: 'Today',              sub: getLabel(today.up_probability * 100), pct: today.up_probability * 100, color: getColor(today.up_probability * 100) },
-            { label: 'This week (3 days)', sub: getLabel(week3.up_probability * 100), pct: week3.up_probability * 100, color: getColor(week3.up_probability * 100) },
-            { label: 'Next week (5 days)', sub: getLabel(week5.up_probability * 100), pct: week5.up_probability * 100, color: getColor(week5.up_probability * 100) },
+            { label: 'Today',              sub: getLabel(today.probability_up),  pct: today.probability_up,  color: getColor(today.probability_up) },
+            { label: 'This week (3 days)', sub: getLabel(week3.probability_up),  pct: week3.probability_up,  color: getColor(week3.probability_up) },
+            { label: 'Next week (5 days)', sub: getLabel(week5.probability_up),  pct: week5.probability_up,  color: getColor(week5.probability_up) },
           ].map(row => (
             <div key={row.label} className="ms-pred-row">
               <div className="ms-pred-top">
@@ -170,19 +155,19 @@ function PredictionSheet({ onClose }) {
           ))}
 
           {/* Price range */}
-          {prediction?.price_range && (
+          {priceRange && (
             <div className="ms-range">
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Low</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--red)' }}>
-                  {currency}{prediction.price_range.low?.toLocaleString()}
+                  {currency}{priceRange.low.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '12px' }}>→</div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '11px', color: 'var(--muted)' }}>High</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--green)' }}>
-                  {currency}{prediction.price_range.high?.toLocaleString()}
+                  {currency}{priceRange.high.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -214,7 +199,6 @@ function PredictionSheet({ onClose }) {
             </div>
           )}
 
-          {/* Feedback message */}
           {message && (
             <div style={{
               padding: '9px 12px', borderRadius: '7px', fontSize: '12px',
@@ -226,7 +210,7 @@ function PredictionSheet({ onClose }) {
           )}
         </div>
 
-        {/* ── Tracked Predictions ── */}
+        {/* Tracked Predictions */}
         {trackedPredictions?.length > 0 && (
           <div style={{ padding: '0 16px 16px' }}>
             <div style={{
