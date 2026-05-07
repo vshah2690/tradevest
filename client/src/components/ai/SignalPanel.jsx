@@ -34,22 +34,22 @@ export default function SignalPanel() {
 
   if (isLoading) {
     return (
-      <div style={{
-        background:  'var(--bg2)',
-        borderTop:   '1px solid var(--border)',
-        padding:     '20px 24px',
-        display:     'flex',
-        alignItems:  'center',
-        gap:         '12px',
-        color:       'var(--muted)',
-        fontSize:    '13px'
+      <div className="signal-panel" style={{
+        background: 'var(--bg2)',
+        borderTop:  '1px solid var(--border)',
+        padding:    '20px 24px',
+        display:    'flex',
+        alignItems: 'center',
+        gap:        '12px',
+        color:      'var(--muted)',
+        fontSize:   '13px',
       }}>
         <div style={{
           width: '18px', height: '18px',
           border: '2px solid var(--border2)',
           borderTopColor: 'var(--purple)',
           borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite', flexShrink: 0
+          animation: 'spin 0.8s linear infinite', flexShrink: 0,
         }} />
         TradeVest AI is analysing {symClean}...
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -63,12 +63,10 @@ export default function SignalPanel() {
   const overall  = currentData.overall_signal
   const preds    = currentData.predictions
 
-  // Get the most reliable prediction (5-day has highest accuracy)
   const best     = preds.find(p => p.horizon === 'Medium-term') || preds[0]
   const readable = getReadableSignal(best?.signal || overall, best?.confidence || 50)
 
-  // Price range from all predictions
-  const targets  = preds.map(p => {
+  const targets   = preds.map(p => {
     const prob = p.probability_up / 100
     return p.signal === 'BUY'
       ? price * (1 + (prob - 0.5) * 0.15)
@@ -84,16 +82,13 @@ export default function SignalPanel() {
   }
 
   return (
-    <div style={{
-      background:  'var(--bg2)',
-      borderTop:   '1px solid var(--border)',
-      padding:     '16px 20px',
+    <div className="signal-panel" style={{
+      background: 'var(--bg2)',
+      borderTop:  '1px solid var(--border)',
+      padding:    '16px 20px',
     }}>
-      <div style={{
-        display:  'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap:      '16px',
-      }}>
+      {/* Grid — 2 cols on desktop, 1 col on mobile via CSS */}
+      <div className="signal-grid">
 
         {/* LEFT — Main verdict */}
         <div style={{
@@ -102,40 +97,29 @@ export default function SignalPanel() {
           padding:      '16px',
           border:       `1px solid ${readable.color}30`,
         }}>
-          {/* Header */}
           <div style={{
-            fontSize:     '11px',
-            color:        'var(--muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.8px',
-            marginBottom: '10px',
-            fontWeight:   '600'
+            fontSize: '11px', color: 'var(--muted)',
+            textTransform: 'uppercase', letterSpacing: '0.8px',
+            marginBottom: '10px', fontWeight: '600',
           }}>
             AI Verdict for {symClean}
           </div>
 
-          {/* Main signal */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
             <span style={{ fontSize: '24px' }}>{readable.emoji}</span>
             <div>
-              <div style={{
-                fontSize:   '18px',
-                fontWeight: '700',
-                color:      readable.color,
-                letterSpacing: '-0.3px'
-              }}>{readable.text}</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: readable.color, letterSpacing: '-0.3px' }}>
+                {readable.text}
+              </div>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
                 {getConfidenceLabel(best?.confidence)} · {best?.confidence}% probability
               </div>
             </div>
           </div>
 
-          {/* Predicted range */}
           <div style={{
-            background:   'var(--bg4)',
-            borderRadius: '8px',
-            padding:      '10px 12px',
-            marginTop:    '10px',
+            background: 'var(--bg4)', borderRadius: '8px',
+            padding: '10px 12px', marginTop: '10px',
           }}>
             <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Predicted price range
@@ -156,24 +140,19 @@ export default function SignalPanel() {
               </div>
             </div>
             <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--muted)' }}>
-              Current: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>
+              Current:{' '}
+              <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>
                 {currency}{price?.toLocaleString()}
               </span>
             </div>
           </div>
 
-          {/* Disclaimer */}
-          <div style={{
-            marginTop:  '10px',
-            fontSize:   '10px',
-            color:      'var(--muted2)',
-            lineHeight: '1.5',
-          }}>
+          <div style={{ marginTop: '10px', fontSize: '10px', color: 'var(--muted2)', lineHeight: '1.5' }}>
             ⚠️ AI analysis only — not financial advice. Always do your own research.
           </div>
         </div>
 
-        {/* RIGHT — Breakdown per horizon */}
+        {/* RIGHT — Breakdown */}
         <div style={{
           background:   'var(--bg3)',
           borderRadius: '12px',
@@ -181,12 +160,9 @@ export default function SignalPanel() {
           border:       '1px solid var(--border)',
         }}>
           <div style={{
-            fontSize:      '11px',
-            color:         'var(--muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.8px',
-            marginBottom:  '12px',
-            fontWeight:    '600'
+            fontSize: '11px', color: 'var(--muted)',
+            textTransform: 'uppercase', letterSpacing: '0.8px',
+            marginBottom: '12px', fontWeight: '600',
           }}>
             Prediction Breakdown
           </div>
@@ -198,11 +174,10 @@ export default function SignalPanel() {
 
             return (
               <div key={i} style={{
-                marginBottom: i < preds.length - 1 ? '14px' : 0,
+                marginBottom:  i < preds.length - 1 ? '14px' : 0,
                 paddingBottom: i < preds.length - 1 ? '14px' : 0,
-                borderBottom: i < preds.length - 1 ? '1px solid var(--border)' : 'none',
+                borderBottom:  i < preds.length - 1 ? '1px solid var(--border)' : 'none',
               }}>
-                {/* Label + verdict */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <div>
                     <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)' }}>{lbl}</div>
@@ -216,25 +191,18 @@ export default function SignalPanel() {
                   </div>
                 </div>
 
-                {/* Progress bar */}
                 <div style={{ height: '4px', background: 'var(--bg4)', borderRadius: '2px', overflow: 'hidden' }}>
                   <div style={{
-                    width:        `${barW}%`,
-                    height:       '100%',
-                    background:   r.color,
-                    borderRadius: '2px',
-                    transition:   'width 0.6s ease'
+                    width: `${barW}%`, height: '100%',
+                    background: r.color, borderRadius: '2px',
+                    transition: 'width 0.6s ease',
                   }} />
                 </div>
 
-                {/* Up/down split */}
                 <div style={{
-                  display:        'flex',
-                  justifyContent: 'space-between',
-                  marginTop:      '4px',
-                  fontSize:       '10px',
-                  fontFamily:     'var(--mono)',
-                  color:          'var(--muted)'
+                  display: 'flex', justifyContent: 'space-between',
+                  marginTop: '4px', fontSize: '10px',
+                  fontFamily: 'var(--mono)', color: 'var(--muted)',
                 }}>
                   <span style={{ color: 'var(--green)' }}>↑ {pred.probability_up}% chance up</span>
                   <span style={{ color: 'var(--red)' }}>↓ {pred.probability_down}% chance down</span>
@@ -243,20 +211,16 @@ export default function SignalPanel() {
             )
           })}
 
-          {/* Model note */}
           <div style={{
-            marginTop:    '12px',
-            padding:      '8px 10px',
-            background:   'var(--bg4)',
-            borderRadius: '6px',
-            fontSize:     '10px',
-            color:        'var(--muted)',
-            lineHeight:   '1.5'
+            marginTop: '12px', padding: '8px 10px',
+            background: 'var(--bg4)', borderRadius: '6px',
+            fontSize: '10px', color: 'var(--muted)', lineHeight: '1.5',
           }}>
             💡 Predictions use XGBoost ML trained on 10 years of market data.
             Best accuracy on 5-day predictions (73.42%).
           </div>
         </div>
+
       </div>
     </div>
   )
