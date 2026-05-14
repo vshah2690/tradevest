@@ -330,6 +330,8 @@ def add_indicators(df):
     df['target_1d'] = (close.shift(-1) > close).astype(int)
     df['target_3d'] = (close.shift(-3) > close).astype(int)
     df['target_5d'] = (close.shift(-5) > close).astype(int)
+    df['target_21d'] = (close.shift(-21) > close).astype(int)
+    df['target_63d'] = (close.shift(-63) > close).astype(int)
 
     # ── Final Cleanup ─────────────────────────────────────────────────────────
     # Replace infinity values (from division by zero in ratio features)

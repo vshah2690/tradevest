@@ -54,6 +54,8 @@ const useStore = create((set, get) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
   setError:   (error)     => set({ error }),
+  predictionError:     null,
+  setPredictionError:  (error)     => set({ predictionError: error }),
 
   // ── Portfolio ─────────────────────────────────────────────────
   portfolio:    null,

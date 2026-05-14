@@ -5,6 +5,8 @@ import {
 } from 'recharts'
 import useStore from '../../store'
 import { marketAPI, watchlistAPI } from '../../services/api'
+import usePrediction from '../../hooks/usePrediction'
+
 
 export default function PriceChart() {
   const currentData    = useStore(s => s.currentData)
@@ -25,6 +27,9 @@ export default function PriceChart() {
   const lineColor = isUp ? 'var(--green)' : 'var(--red)'
   const symClean  = currentSymbol?.replace('.NS','').replace('.BO','')
   const isInWatch = watchlist.find(w => w.symbol === currentSymbol)
+  const { error } = usePrediction()
+  const predictionError = useStore(s => s.predictionError)
+
 
   useEffect(() => {
     if (!currentSymbol) return
@@ -123,17 +128,31 @@ export default function PriceChart() {
     )
   }
 
-  if (!currentData) {
-    return (
-      <div style={{
-        height: '100%', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        color: 'var(--muted)', fontSize: '13px',
-      }}>
-        Select a stock to view chart
-      </div>
-    )
-  }
+if (!currentData) {
+  return (
+    <div style={{
+      height: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: '8px'
+    }}>
+      {predictionError ? (
+        <>
+          <div style={{ fontSize: '28px' }}>⚠️</div>
+          <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '14px' }}>
+            Symbol not found
+          </div>
+          <div style={{ color: 'var(--muted)', fontSize: '12px', textAlign: 'center', maxWidth: '260px' }}>
+            {predictionError}
+          </div>
+        </>
+      ) : (
+        <div style={{ color: 'var(--muted)', fontSize: '13px' }}>
+          Select a stock to view chart
+        </div>
+      )}
+    </div>
+  )
+}
 
   return (
     <div className="chart-container">

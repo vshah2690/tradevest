@@ -2,6 +2,7 @@ import { useState } from 'react'
 import useStore from '../../store'
 import StockSearch from '../search/StockSearch'
 import AuthModal   from '../auth/AuthModal'
+import NotificationBell from '../notifications/NotificationBell'
 
 export default function Navbar() {
   const user          = useStore(s => s.user)
@@ -31,6 +32,7 @@ export default function Navbar() {
         {/* Right side */}
         <div className="navbar-right">
           <div className="navbar-live">
+            <NotificationBell />
             <div className="navbar-live-dot" />
             <span className="navbar-live-label">Live Data</span>
           </div>

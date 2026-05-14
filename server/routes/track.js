@@ -10,11 +10,11 @@ const router            = express.Router()
 const auth              = require('../middleware/auth')
 const axios             = require('axios')
 const TrackedPrediction = require('../models/TrackedPrediction')
+const Notification      = require('../models/Notification')
 
 const ML_API = process.env.ML_API_URL || 'http://localhost:5001'
 
 // POST /api/track
-// Track a prediction
 router.post('/', auth, async (req, res) => {
   try {
     const { symbol, name, signal, confidence, horizon, days, priceAtTrack } = req.body
@@ -23,7 +23,6 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ error: 'Symbol, signal and price required' })
     }
 
-    // Calculate target date
     const targetDate = new Date()
     targetDate.setDate(targetDate.getDate() + (days || 5))
 
@@ -43,8 +42,8 @@ router.post('/', auth, async (req, res) => {
     await tracked.save()
 
     res.json({
-      success: true,
-      message: `Tracking ${signal} prediction for ${symbol}`,
+      success:    true,
+      message:    `Tracking ${signal} prediction for ${symbol}`,
       prediction: tracked
     })
   } catch (err) {
@@ -53,46 +52,58 @@ router.post('/', auth, async (req, res) => {
 })
 
 // GET /api/track
-// Get all tracked predictions for user
 router.get('/', auth, async (req, res) => {
   try {
     const predictions = await TrackedPrediction.find({ userId: req.userId })
       .sort({ trackedAt: -1 })
       .limit(20)
 
-    // Update outcomes for pending predictions that have passed target date
-    const now = new Date()
+    const now     = new Date()
     const updates = []
 
     for (const pred of predictions) {
       if (pred.outcome === 'PENDING' && pred.targetDate <= now) {
         try {
-          // Fetch current price
-          const response = await axios.get(
-            `${ML_API}/predict/${pred.symbol}`,
-            { timeout: 10000 }
-          )
+          const response     = await axios.get(`${ML_API}/predict/${pred.symbol}`, { timeout: 10000 })
           const currentPrice = response.data.current_price
           const returnPct    = ((currentPrice - pred.priceAtTrack) / pred.priceAtTrack) * 100
 
-          // Determine if prediction was correct
           let outcome = 'INCORRECT'
           if (pred.signal === 'BUY'  && currentPrice > pred.priceAtTrack) outcome = 'CORRECT'
           if (pred.signal === 'SELL' && currentPrice < pred.priceAtTrack) outcome = 'CORRECT'
-          if (pred.signal === 'HOLD') outcome = 'CORRECT' // HOLD is always "correct"
+          if (pred.signal === 'HOLD') outcome = 'CORRECT'
 
           pred.currentPrice = currentPrice
           pred.returnPct    = parseFloat(returnPct.toFixed(2))
           pred.outcome      = outcome
           await pred.save()
           updates.push(pred.symbol)
+
+          // ── Create notification when prediction resolves ──────────────
+          const currency  = pred.symbol.includes('.NS') ? '₹' : '$'
+          const isCorrect = outcome === 'CORRECT'
+          const symClean  = pred.symbol.replace('.NS','').replace('.BO','')
+
+          await Notification.create({
+            userId:       pred.userId,
+            type:         isCorrect ? 'prediction_correct' : 'prediction_wrong',
+            title:        `${symClean} prediction resolved!`,
+            message:      `${pred.signal} @ ${currency}${pred.priceAtTrack} → ${currency}${currentPrice.toFixed(2)} · AI was ${isCorrect ? 'CORRECT ✅' : 'WRONG ❌'} · ${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(2)}%`,
+            symbol:       pred.symbol,
+            signal:       pred.signal,
+            priceAtTrack: pred.priceAtTrack,
+            currentPrice,
+            returnPct:    parseFloat(returnPct.toFixed(2)),
+            outcome,
+            predictionId: pred._id,
+          })
+
         } catch {
           // Skip if price fetch fails
         }
       }
     }
 
-    // Calculate stats
     const completed = predictions.filter(p => p.outcome !== 'PENDING')
     const correct   = completed.filter(p => p.outcome === 'CORRECT').length
     const accuracy  = completed.length > 0

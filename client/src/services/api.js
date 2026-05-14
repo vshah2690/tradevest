@@ -49,4 +49,12 @@ export const trackAPI = {
   delete: (id)   => API.delete(`/track/${id}`),
 }
 
+export const notificationAPI = {
+  getAll:     ()   => API.get('/notifications'),
+  markRead:   (id) => API.patch(`/notifications/${id}/read`),
+  markAllRead: ()  => API.patch('/notifications/read-all'),
+  delete:     (id) => API.patch(`/notifications/${id}/delete`),
+  deleteAll:  ()   => API.patch('/notifications/delete-all'),
+}
+
 export default API

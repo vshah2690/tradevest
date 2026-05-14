@@ -75,13 +75,13 @@ app.add_middleware(
 )
 
 # ── Model Registry ────────────────────────────────────────────────────────────
-# Defines the 3 prediction horizons and their model files
+# Defines the 5 predictions horizons and their model files
 HORIZONS = [
     {
         "key":        "1d",
         "label":      "Intraday",
         "days":       1,
-        "accuracy":   52.05,
+        "accuracy":   52.86,
         "confidence": "low",
         "ui_color":   "yellow",
         "description": "Next trading day direction"
@@ -90,7 +90,7 @@ HORIZONS = [
         "key":        "3d",
         "label":      "Short-term",
         "days":       3,
-        "accuracy":   65.86,
+        "accuracy":   65.29,
         "confidence": "medium",
         "ui_color":   "orange",
         "description": "3 trading days direction"
@@ -99,10 +99,28 @@ HORIZONS = [
         "key":        "5d",
         "label":      "Medium-term",
         "days":       5,
-        "accuracy":   73.42,
+        "accuracy":   73.26,
         "confidence": "high",
         "ui_color":   "green",
         "description": "5 trading days (1 week) direction"
+    },
+    {
+        "key":        "21d",
+        "label":      "Long-term",
+        "days":       21,
+        "accuracy":   89.38,
+        "confidence": "high",
+        "ui_color":   "blue",
+        "description": "1 month direction"
+    },
+    {
+        "key":        "63d",
+        "label":      "Very Long-term",
+        "days":       63,
+        "accuracy":   94.33,
+        "confidence": "high",
+        "ui_color":   "purple",
+        "description": "3 month direction"
     },
 ]
 
@@ -566,7 +584,7 @@ SEARCH_INDEX_PATH = os.path.join(BASE_DIR, 'data', 'search_index.json')
 def load_search_index():
     global SEARCH_INDEX
     try:
-        with open(SEARCH_INDEX_PATH, 'r') as f:
+        with open(SEARCH_INDEX_PATH, 'r', encoding='utf-8') as f:
             SEARCH_INDEX = json.load(f)
         print(f"  Search index loaded: {len(SEARCH_INDEX)} stocks")
     except Exception as e:
@@ -577,32 +595,49 @@ load_search_index()
 
 @app.get("/search")
 def search_stocks(query: str):
-    """
-    Searches the pre-built stock index by name OR symbol.
-    Covers NSE, BSE, NYSE, NASDAQ stocks.
-    """
     if not query or len(query.strip()) < 1:
         raise HTTPException(status_code=400, detail="Query required")
 
-    q = query.strip().lower()
+    q       = query.strip().lower()
+    q_clean = q.replace('.ns','').replace('.bo','').replace('.l','').replace('.de','').replace('.to','').replace('.hk','').replace('.t','')
 
     results = []
     for stock in SEARCH_INDEX:
-        sym  = stock.get('symbol', '').lower()
-        name = stock.get('name', '').lower()
+        sym       = stock.get('symbol', '').lower()
+        name      = stock.get('name', '').lower()
+        sym_clean = sym.replace('.ns','').replace('.bo','').replace('.l','').replace('.de','').replace('.to','').replace('.hk','').replace('.t','')
 
-        # Match by symbol start, symbol contains, or name contains
-        if (sym.startswith(q) or
-            q in sym.replace('.ns','').replace('.bo','') or
-            q in name):
+        # Strict matching — symbol starts with query OR name starts with query
+        # OR query is an exact word in the name (not just substring)
+        name_words = name.split()
+        sym_match  = sym_clean.startswith(q_clean) or sym.startswith(q)
+        name_match = name.startswith(q) or any(w.startswith(q) for w in name_words)
+
+        if sym_match or name_match:
             results.append(stock)
 
-    # Sort — exact symbol matches first, then by name
+    # Sort — exact symbol match first, then name starts with query
     results.sort(key=lambda x: (
-        not x['symbol'].lower().startswith(q),
-        not x['symbol'].lower().replace('.ns','').replace('.bo','').startswith(q),
+        not x['symbol'].lower().replace('.ns','').replace('.bo','').startswith(q_clean),
+        not x['name'].lower().startswith(q),
         x['name']
     ))
+
+    # Smart suggestions if less than 3 results
+    if len(results) < 3 and len(query.strip()) >= 2:
+        q_upper = query.strip().upper()
+        suggestions = [
+            {"symbol": f"{q_upper}.L",  "name": f"{q_upper} (London Stock Exchange)", "exchange": "LSE",      "flag": "🇬🇧", "country": "United Kingdom"},
+            {"symbol": f"{q_upper}.DE", "name": f"{q_upper} (Frankfurt/XETRA)",       "exchange": "XETRA",    "flag": "🇩🇪", "country": "Germany"},
+            {"symbol": f"{q_upper}.PA", "name": f"{q_upper} (Paris/Euronext)",        "exchange": "Euronext", "flag": "🇫🇷", "country": "France"},
+            {"symbol": f"{q_upper}.T",  "name": f"{q_upper} (Tokyo Stock Exchange)",  "exchange": "TSE",      "flag": "🇯🇵", "country": "Japan"},
+            {"symbol": f"{q_upper}.HK", "name": f"{q_upper} (Hong Kong Exchange)",    "exchange": "HKEX",     "flag": "🇭🇰", "country": "Hong Kong"},
+            {"symbol": f"{q_upper}.TO", "name": f"{q_upper} (Toronto Stock Exchange)","exchange": "TSX",      "flag": "🇨🇦", "country": "Canada"},
+        ]
+        existing = {r['symbol'] for r in results}
+        for s in suggestions:
+            if s['symbol'] not in existing:
+                results.append(s)
 
     return {
         "query":   query,

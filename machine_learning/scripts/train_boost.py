@@ -186,6 +186,20 @@ HORIZONS = [
         'ui_color':  'green',
         'note':      'Most reliable signal — shown as high confidence'
     },
+    {
+    'target':    'target_21d',
+    'label':     'Long-term (1 Month)',
+    'model_key': '21d',
+    'ui_color':  'blue',
+    'note':      '1 month trend — investor signal'
+    },
+    {
+        'target':    'target_63d',
+        'label':     'Very Long-term (3 Months)',
+        'model_key': '63d',
+        'ui_color':  'purple',
+        'note':      '3 month trend — position trader signal'
+    },
 ]
 
 # GridSearch parameter grid — 243 combinations (3^5)

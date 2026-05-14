@@ -76,9 +76,11 @@ export default function SignalPanel() {
   const maxTarget = Math.max(...targets)
 
   const HORIZON_LABELS = {
-    'Intraday':    'Today',
-    'Short-term':  'This week (3 days)',
-    'Medium-term': 'Next week (5 days)',
+    'Intraday':       'Today (1 day)',
+    'Short-term':     'This week (3 days)',
+    'Medium-term':    'Next week (5 days)',
+    'Long-term':      '1 Month',
+    'Very Long-term': '3 Months',
   }
 
   return (
@@ -86,6 +88,8 @@ export default function SignalPanel() {
       background: 'var(--bg2)',
       borderTop:  '1px solid var(--border)',
       padding:    '16px 20px',
+      maxHeight:  '320px',
+      overflowY:  'auto',
     }}>
       {/* Grid — 2 cols on desktop, 1 col on mobile via CSS */}
       <div className="signal-grid">
@@ -153,12 +157,14 @@ export default function SignalPanel() {
         </div>
 
         {/* RIGHT — Breakdown */}
-        <div style={{
-          background:   'var(--bg3)',
-          borderRadius: '12px',
-          padding:      '16px',
-          border:       '1px solid var(--border)',
-        }}>
+          <div style={{
+            background:   'var(--bg3)',
+            borderRadius: '12px',
+            padding:      '16px',
+            border:       '1px solid var(--border)',
+            maxHeight:    '280px',
+            overflowY:    'auto',
+          }}>
           <div style={{
             fontSize: '11px', color: 'var(--muted)',
             textTransform: 'uppercase', letterSpacing: '0.8px',
@@ -217,7 +223,7 @@ export default function SignalPanel() {
             fontSize: '10px', color: 'var(--muted)', lineHeight: '1.5',
           }}>
             💡 Predictions use XGBoost ML trained on 10 years of market data.
-            Best accuracy on 5-day predictions (73.42%).
+            Best accuracy on 3-month predictions (94.33%)
           </div>
         </div>
 

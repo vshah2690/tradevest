@@ -24,6 +24,7 @@ const portfolioRoutes = require('./routes/portfolio')
 const aiRoutes = require('./routes/ai')
 const watchlistRoutes = require('./routes/watchlist')
 const trackRoutes     = require('./routes/track')
+const notificationRoutes = require('./routes/notifications')
 
 const app    = express()
 const server = http.createServer(app)
@@ -41,6 +42,7 @@ app.use('/api/portfolio', portfolioRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/watchlist', watchlistRoutes)
 app.use('/api/track',     trackRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // Health check
 app.get('/', (req, res) => {
@@ -136,5 +138,16 @@ server.listen(PORT, () => {
   console.log(`  ML API    : ${process.env.ML_API_URL || 'http://localhost:5001'}`)
   console.log('='.repeat(50))
 })
+// code to ping backend server api so it never sleeps.
+// const PING_INTERVAL = 60 * 60 * 1000 // 60 minutes
+
+// setInterval(async () => {
+//   try {
+//     await axios.get(`${process.env.ML_API_URL}/health`)
+//     console.log('Keep-alive ping sent to ML server')
+//   } catch {
+//     console.log('Keep-alive ping failed — ML server may be sleeping')
+//   }
+// }, PING_INTERVAL)
 
 module.exports = { app, broadcast }

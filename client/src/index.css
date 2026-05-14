@@ -49,3 +49,56 @@ body {
 input, button, select {
   font-family: var(--font);
 }
+
+/* Chart layout */
+.chart-container {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-inner {
+  flex: 1;
+  min-height: 0;
+  height: 200px;
+}
+
+/* Star button — hidden on desktop, shown on mobile */
+.chart-star-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+/* Skeleton animations */
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+@keyframes bar {
+  0%   { opacity: 0.3; transform: scaleY(0.8); }
+  100% { opacity: 0.8; transform: scaleY(1.1); }
+}
+@keyframes dot {
+  0%   { opacity: 0.2; transform: scale(0.8); }
+  100% { opacity: 1;   transform: scale(1.2); }
+}
+
+/* Signal panel grid */
+.signal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .chart-star-btn { display: block; }
+  .signal-grid    { grid-template-columns: 1fr; }
+}
