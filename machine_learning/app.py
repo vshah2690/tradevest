@@ -644,3 +644,24 @@ def search_stocks(query: str):
         "count":   len(results[:20]),
         "results": results[:20]
     }
+
+# Code for ping the ML server so it doesn't sleep after inactivity.....
+from fastapi import FastAPI
+from fastapi.routing import APIRoute
+
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health():
+    """Health check — supports HEAD for UptimeRobot monitoring."""
+    return {
+        "status": "healthy",
+        "models": [
+            {
+                "horizon":          m["meta"]["label"],
+                "loaded":           True,
+                "accuracy":         m["meta"]["accuracy"],
+                "confidence_level": m["meta"]["confidence"],
+            }
+            for m in models.values()
+        ],
+        "timestamp": datetime.now().isoformat(),
+    }
