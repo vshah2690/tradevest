@@ -138,16 +138,5 @@ server.listen(PORT, () => {
   console.log(`  ML API    : ${process.env.ML_API_URL || 'http://localhost:5001'}`)
   console.log('='.repeat(50))
 })
-// code to ping backend server api so it never sleeps.
-// const PING_INTERVAL = 60 * 60 * 1000 // 60 minutes
-
-// setInterval(async () => {
-//   try {
-//     await axios.get(`${process.env.ML_API_URL}/health`)
-//     console.log('Keep-alive ping sent to ML server')
-//   } catch {
-//     console.log('Keep-alive ping failed — ML server may be sleeping')
-//   }
-// }, PING_INTERVAL)
 
 module.exports = { app, broadcast }

@@ -57,4 +57,9 @@ export const notificationAPI = {
   deleteAll:  ()   => API.patch('/notifications/delete-all'),
 }
 
+export const aiAPI = {
+  chat:     (data)   => API.post('/ai/chat', data),
+  analysis: (symbol) => API.get(`/ai/analysis/${symbol}`),
+}
+
 export default API

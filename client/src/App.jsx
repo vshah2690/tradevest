@@ -11,6 +11,7 @@ import SignalPanel    from './components/ai/SignalPanel'
 import OrderPanel     from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
 import MobileSheets   from './components/mobile/MobileSheets'
+import ChatPanel from './components/ai/ChatPanel'
 
 import './App.css'
 
@@ -64,6 +65,9 @@ export default function App() {
 
       {/* Mobile only — FABs + bottom sheets */}
       <MobileSheets />
+
+      {/* AI Chat — floating button, works on all screen sizes */}
+      <ChatPanel />
 
     </div>
   )
