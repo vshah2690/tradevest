@@ -218,4 +218,28 @@ router.get('/analysis/:symbol', async (req, res) => {
   }
 })
 
+// GET /api/ai/remaining — get remaining messages for today
+router.get('/remaining', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader) return res.json({ remaining: 0, limit: DAILY_LIMIT })
+
+    let userId
+    try {
+      const token   = authHeader.split(' ')[1]
+      const decoded = jwt.verify(token, JWT_SECRET)
+      userId        = decoded.userId
+    } catch {
+      return res.json({ remaining: 0, limit: DAILY_LIMIT })
+    }
+
+    const rateData  = checkRateLimit(userId)
+    const remaining = Math.max(0, DAILY_LIMIT - rateData.count)
+
+    res.json({ remaining, limit: DAILY_LIMIT, resetAt: rateData.resetAt })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 module.exports = router

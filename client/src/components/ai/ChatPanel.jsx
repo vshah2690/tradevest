@@ -31,9 +31,18 @@ export default function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Reset chat when stock changes
   useEffect(() => {
     setMessages([])
   }, [currentSymbol])
+
+  // Fetch remaining count when chat opens
+    useEffect(() => {
+    if (!isOpen || !token) return
+    aiAPI.remaining()
+        .then(res => setRemaining(res.data.remaining))
+        .catch(() => {})
+    }, [isOpen, token])
 
   const sendMessage = async (text) => {
     const msg = text || input.trim()

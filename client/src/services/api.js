@@ -58,8 +58,9 @@ export const notificationAPI = {
 }
 
 export const aiAPI = {
-  chat:     (data)   => API.post('/ai/chat', data),
-  analysis: (symbol) => API.get(`/ai/analysis/${symbol}`),
+  chat:      (data)   => API.post('/ai/chat', data),
+  analysis:  (symbol) => API.get(`/ai/analysis/${symbol}`),
+  remaining: ()       => API.get('/ai/remaining'),
 }
 
 export default API
